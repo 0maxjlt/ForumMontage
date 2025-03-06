@@ -1,0 +1,96 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+  min-width: 100vw;
+  min-height: 100vh;
+}
+
+
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+.wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr; /* 4 colonnes */
+  grid-template-areas: 
+    "titre titre card4 card4" /* Ligne 1 */
+    "description description description minia" /* Ligne 2 */
+    "card5 card5 card6 statut" /* Ligne 3 */
+    "details details details details"; /* Ligne 4 */
+  gap: 20px;
+  max-width: 1200px;
+  margin:  auto;
+}
+
+.description {
+  grid-area: description;
+}
+
+.titre {
+  grid-area: titre;
+}
+
+.minia {
+  grid-area: minia;
+}
+
+.statut {
+  grid-area: statut;
+}
+
+.card4 {
+  grid-area: card4;
+  display: none;
+}
+
+.card5 {
+  grid-area: card5;
+  display: none;
+}
+
+.card6 {
+  grid-area: card6;
+  display: none;
+}
+
+.details {
+  grid-area: details;
+}
+
+
+
