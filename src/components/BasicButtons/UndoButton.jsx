@@ -1,8 +1,8 @@
 import { Button } from "@mui/material";
 
-function UndoButton() {
+function UndoButton({onClick}) {
   return (
-    <Button variant="contained" color="error" size="small">
+    <Button onClick={onClick} variant="contained" color="error" size="small" sx={{ width: '100%' }}>
       Annuler
     </Button>
   );

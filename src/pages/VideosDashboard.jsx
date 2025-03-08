@@ -53,7 +53,7 @@ function VideoDashboard() {
   const [modifDetails, setModifDetails] = useState(false);
   const [activeDetails, setActiveDetails] = useState(null);
 
-   const [freqValue, setFreqValue] = React.useState(null);
+  const [freqValue, setFreqValue] = React.useState(null);
 
   const navigate = useNavigate();
 
@@ -61,6 +61,31 @@ function VideoDashboard() {
     setModifMod(true);
     setActiveMod(null);
     console.log("Bouton Cliqué");
+  };
+
+  const handleSave = (setModifMod, setActiveMod) => {
+    setModifMod(false);
+    setActiveMod(null);
+
+    setFormData((prevData) => ({
+      ...prevData,
+      details: {
+        ...prevData.details,
+        frequence: activeDetails
+      }
+    }))
+  }
+
+  const handleUndo = (setModifMod, setActiveMod) => {
+    setModifMod(false);
+    setActiveMod(null);
+    console.log("Annulé");
+    setFormData((prevData) => ({
+      ...prevData,
+      details: {
+        ...prevData.details
+      }
+    }))
   };
 
   const handleFileChange = (event) => {
@@ -722,49 +747,62 @@ function VideoDashboard() {
         <Card className="details">
           <CardContent>
             <Stack>
-
-
               <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
                 <Stack direction="column" spacing={1} sx={{ width: "50%" }}>
-
                   <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
                     Durée rushs estimée
                   </Typography>
-
                   <BtnDetails />
                   <Divider />
                   <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
                     Durée vidéo estimée
                   </Typography>
-
                   <BtnDetails />
-
                 </Stack>
                 <Divider orientation="vertical" flexItem />
-
                 <Box sx={{ width: "50%", display: "flex" }}>
                   <Stack direction="column" spacing={1} sx={{ width: "100%" }}>
-                    <BtnFrequences modifDetails={modifDetails} freqValue={freqValue} setFreqValue={setFreqValue}/>
+                    <BtnFrequences modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails={setActiveDetails} formData={formData} setFormData={setFormData} />
                     {!modifDetails ? (
                       <EditButton onClick={() => handleEdit(setModifDetails, setActiveDetails)} />
                     ) : (
-                      <>
-                        <SaveButton onClick={() => handleSave(setModifDetails, setActiveDetails)} />
-                        <UndoButton onClick={() => handleUndo(setModifDetails, setActiveDetails)} />
-                      </>
-
-                    )
-                    }
+                      <Stack direction="row" spacing={1}>
+                        
+                        <SaveButton onClick={() => {handleSave(setModifDetails, setActiveDetails); console.log(formData.details)}} />
+                        <UndoButton onClick={() => {handleUndo(setModifDetails, setActiveDetails); console.log(formData.details)}} />
+                      </Stack>
+                    )}
                   </Stack>
                 </Box>
-
               </Stack>
-
-
             </Stack>
           </CardContent>
         </Card>
 
+
+        <Card elevation={2} sx={{ borderRadius: 2 }} className="card5">
+          <CardContent>
+            <TextField
+              fullWidth
+              label="Statut"
+              variant="outlined"
+              value={formData.statut}
+              onChange={(e) => setFormData({ ...formData, statut: e.target.value })}
+            />
+          </CardContent>
+        </Card>
+
+        <Card elevation={2} sx={{ borderRadius: 2 }} className="card6">
+          <CardContent>
+            <TextField
+              fullWidth
+              label="Tags (séparés par des virgules)"
+              variant="outlined"
+              value={formData.tags}
+              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+            />
+          </CardContent>
+        </Card>
 
 
 

@@ -7,6 +7,8 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import Autocomplete from '@mui/material/Autocomplete';
 import { Grow, Stack } from '@mui/material';
+import SaveButton from '../BasicButtons/SaveButton';
+import UndoButton from '../BasicButtons/UndoButton';
 
 const publicationFrequencies = [
   'Personnalisée',
@@ -15,85 +17,85 @@ const publicationFrequencies = [
   'Quotidienne',
   'Une fois',
   'Occasionnelle',
- 
 ];
 
 
 
-export default function BtnFrequences({modifDetails, freqValue, setFreqValue}) {
-  const [freqValue, setFreqValue] = React.useState(null);
+export default function BtnFrequences({ modifDetails, formData, setFormData, activeDetails, setActiveDetails }) {
   const [open, setOpen] = React.useState(false);
   const [dialogValue, setDialogValue] = React.useState('');
   const [load, setLoad] = React.useState(false);
+  const [tempDialogValue, setTempDialogValue] = React.useState('');
+
+
+  const Transition = React.forwardRef(function Transition(props, ref) {
+    return <Slide direction="up" ref={ref} {...props} />;
+  });
 
   const handleClose = () => {
     setDialogValue('');
     setOpen(false);
-    setFreqValue(null);
+    setActiveDetails('');
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    setFreqValue(dialogValue);
+    setFormData({ ...formData, details: { ...formData.details, frequence: dialogValue } });
+
     handleClose();
   };
 
   React.useEffect(() => {
-    console.log('value : ', value);
+    console.log('details : ', formData.details.frequence);
   }
-    , [value]);
-
+    , [formData.details.frequence]);
 
   return (
     <>
 
       <Autocomplete
-        value={value}
+        value={formData != "" ? formData.details.frequence : activeDetails}
         onChange={(event, newValue) => {
-          if (newValue == 'Personnalisée'){setDialogValue(''); setOpen(true); }
-          else if (!publicationFrequencies.includes(newValue)) {
-            setDialogValue(newValue);
-            setOpen(true);
-          } else {
-            setValue(newValue);
+          if (newValue == 'Personnalisée') { setDialogValue(''); setOpen(true); }
+
+          else {
+            console.log('newValue : ', newValue);
+            if (newValue == '' || newValue == null) {
+              setOpen(false);
+            }
+            else {
+              setActiveDetails(newValue);
+              setDialogValue(newValue);
+            }
           }
         }}
         disabled={!modifDetails}
         options={publicationFrequencies}
         renderInput={(params) => <TextField {...params} label="Fréquence de publication" />}
-        freeSolo
+
         sx={{ width: "100%" }}
-        
+
       />
-      <Dialog open={open} onClose={handleClose}>
+      <Dialog open={open}>
         <form onSubmit={handleSubmit}>
           <DialogTitle>Ajouter une option</DialogTitle>
           <DialogContent>
             <TextField
               autoFocus
               margin="dense"
-              value={dialogValue}
-              onChange={(event) => {setLoad(true); setDialogValue(event.target.value)}}
+              value={tempDialogValue}
+              onChange={(event) => { setTempDialogValue(event.target.value) }}
               label="Nouvelle fréquence"
               type="text"
-              fullWidth
-              
+              fullWidth              
             />
           </DialogContent>
-          <Stack spacing={2} display="flex" direction="row" justifyContent="center" alignItems="center">
 
-          <DialogActions >
-          <Button variant="contained" color="success" type="submit">
-              Ajouter
-            </Button>
-          
-            <Button variant="contained" color="error" onClick={handleClose}>
-              Annuler
-            </Button>
-  
-          </DialogActions>
-          </Stack>
         </form>
+        <Stack display={'flex'} direction={'row'} justifyContent={'space-between'} alignItems={'center'} spacing={2} sx={{ p: 2 }}>
+          <SaveButton onClick={{handleSubmit, handleClose }} />
+          <UndoButton onClick={handleClose} />
+        </Stack>
       </Dialog>
     </>
   );
