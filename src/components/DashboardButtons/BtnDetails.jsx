@@ -22,11 +22,12 @@ function BtnDetails() {
 
     return (
         <Stack spacing={2} display="flex" direction="row" alignItems="center"  sx={{ width: "100%" }}>
-            <Stack display="flex" direction="row" alignItems="center" justifyContent="space-between" sx={{ width: "30%" }}>
+            <Stack display="flex" direction="column" alignItems="center" justifyContent="space-between" sx={{ width: "50%" }}>
 
             <Typography variant='button' sx={{
                 color: 'text.secondary',
                 width: '100%',
+                
              }}>
                 {scale(value[0]) === scale(value[1])
                     ? scale(value[0]) == 1 ? `${scale(value[0])} minute` :

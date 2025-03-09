@@ -7,6 +7,9 @@
   min-height: 100vh;
 }
 
+.MuiCardContent-root {
+  padding: 2 !important;
+}
 
 
 .logo {
@@ -50,8 +53,8 @@
   grid-template-areas: 
     "titre titre card4 card4" /* Ligne 1 */
     "description description description minia" /* Ligne 2 */
-    "card5 card5 card6 statut" /* Ligne 3 */
-    "details details details details"; /* Ligne 4 */
+    "statut details details details" /* Ligne 3 */
+    "card5 card5 card6 card6"; /* Ligne 4 */
   gap: 20px;
   max-width: 1200px;
   margin:  auto;

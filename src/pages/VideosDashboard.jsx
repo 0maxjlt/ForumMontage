@@ -13,9 +13,12 @@ import BtnFrequences from "../components/DashboardButtons/BtnFrequences";
 import EditButton from "../components/BasicButtons/EditButton";
 import SaveButton from "../components/BasicButtons/SaveButton";
 import UndoButton from "../components/BasicButtons/UndoButton";
-
+import AddButton from "../components/BasicButtons/AddButton";
+import DeleteIconButton from "../components/BasicButtons/DeleteIconButton";
+import { color } from "framer-motion";
 
 function VideoDashboard() {
+  console.log("Re-render détecté"); // ✅ Vérifier si le composant se rafraîchit en boucle
   const { id } = useParams();
   const [user, setUser] = useState();
 
@@ -28,9 +31,9 @@ function VideoDashboard() {
     tags: [],
     minia: undefined,
     details: {
-      rushs: [0, 0],
-      video: [0, 0],
-      frequence: null
+      rushs: undefined,
+      video: undefined,
+      frequence: undefined
     }
   });
 
@@ -51,34 +54,44 @@ function VideoDashboard() {
   const [modifMinia, setModifMinia] = useState(false);
 
   const [modifDetails, setModifDetails] = useState(false);
-  const [activeDetails, setActiveDetails] = useState(null);
+  const [activeDetailsSlide1, setActiveDetailsSlide1] = useState(null);
+  const [activeDetailsSlide2, setActiveDetailsSlide2] = useState(null);
+  const [activeDetailsFreq, setActiveDetailsFreq] = useState(null);
 
   const [freqValue, setFreqValue] = React.useState(null);
 
   const navigate = useNavigate();
 
-  const handleEdit = (setModifMod, setActiveMod) => {
+  const handleEdit = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
+
     setModifMod(true);
-    setActiveMod(null);
+    setActiveDetailsFreq(''); 
+    setActiveDetailsSlide1(''); 
+    setActiveDetailsSlide2('');
     console.log("Bouton Cliqué");
   };
 
-  const handleSave = (setModifMod, setActiveMod) => {
+  const handleSave = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
     setModifMod(false);
-    setActiveMod(null);
+    setActiveDetailsFreq(null);
+    setActiveDetailsSlide1(null);
+    setActiveDetailsSlide2(null);
 
     setFormData((prevData) => ({
       ...prevData,
       details: {
-        ...prevData.details,
-        frequence: activeDetails
+        rushs: activeDetailsSlide1,
+        video: activeDetailsSlide2,
+        frequence: activeDetailsFreq
       }
     }))
   }
 
-  const handleUndo = (setModifMod, setActiveMod) => {
+  const handleUndo = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
     setModifMod(false);
-    setActiveMod(null);
+    setActiveDetailsFreq(null);
+    setActiveDetailsSlide1(null);
+    setActiveDetailsSlide2(null);
     console.log("Annulé");
     setFormData((prevData) => ({
       ...prevData,
@@ -600,13 +613,13 @@ function VideoDashboard() {
             borderRadius: 2,
             transition: "all 0.3s ease-in-out",
             "&:hover": { transform: "scale(1.02)" },
-            height: '100%' // Permet à la Card de s'étendre entièrement dans son conteneur parent
+            height: 300 // Permet à la Card de s'étendre entièrement dans son conteneur parent
           }} >
             <CardContent sx={{
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              height: '100%',
+
               padding: 2,
             }}>
               {formData.statut == undefined ? (
@@ -624,8 +637,8 @@ function VideoDashboard() {
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
+                    height: 270,
                     justifyContent: 'center', // Centrer le contenu du bouton
-                    height: '100%', // Faire en sorte que le bouton prenne toute la hauteur disponible
                     width: "100%",  // Faire en sorte que le bouton prenne toute la largeur disponible
                   }}
                 >
@@ -744,40 +757,86 @@ function VideoDashboard() {
           </Card>
         </Grow>
 
-        <Card className="details">
-          <CardContent>
-            <Stack>
-              <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
-                <Stack direction="column" spacing={1} sx={{ width: "50%" }}>
-                  <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
-                    Durée rushs estimée
-                  </Typography>
-                  <BtnDetails />
-                  <Divider />
-                  <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
-                    Durée vidéo estimée
-                  </Typography>
-                  <BtnDetails />
-                </Stack>
-                <Divider orientation="vertical" flexItem />
-                <Box sx={{ width: "50%", display: "flex" }}>
-                  <Stack direction="column" spacing={1} sx={{ width: "100%" }}>
-                    <BtnFrequences modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails={setActiveDetails} formData={formData} setFormData={setFormData} />
-                    {!modifDetails ? (
-                      <EditButton onClick={() => handleEdit(setModifDetails, setActiveDetails)} />
-                    ) : (
-                      <Stack direction="row" spacing={1}>
-                        
-                        <SaveButton onClick={() => {handleSave(setModifDetails, setActiveDetails); console.log(formData.details)}} />
-                        <UndoButton onClick={() => {handleUndo(setModifDetails, setActiveDetails); console.log(formData.details)}} />
+        <Grow in={cardsVisibility[4]}
+          style={{ transformOrigin: 'center' }}
+          {...(load ? { timeout: 1000 } : {})}>
+          <Card className="details" sx={{ height: 300 }}>
+            <CardContent >
+              <Stack>
+                {formData.details.frequence !== undefined && formData.details.rushs !== undefined && formData.details.video !== undefined ? (
+                  <Stack display={"flex"} direction="column" spacing={2} alignItems={"center"} sx={{ width: "100%" }}>
+                    <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
+                      <Stack direction="column" spacing={1} sx={{ width: "50%" }}>
+                        <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
+                          Durée rushs estimée
+                        </Typography>
+                        <BtnDetails modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails1={setActiveDetails} formData={formData} setFormData={setFormData}/>
+                        <Divider />
+                        <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
+                          Durée vidéo estimée
+                        </Typography>
+                        <BtnDetails modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails2={setActiveDetails} formData={formData} setFormData={setFormData}/>
                       </Stack>
-                    )}
+                      <Divider orientation="vertical" flexItem />
+                      <Box sx={{ width: "50%", display: "flex" }}>
+
+
+
+                        <Stack direction="column" spacing={1} sx={{ width: "100%" }}>
+                          <BtnFrequences modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails3={setActiveDetails} formData={formData} setFormData={setFormData} />
+
+                          {!modifDetails ? (
+                            <EditButton onClick={() => handleEdit(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2)} />
+                          ) : (
+                            <Stack direction="row" spacing={1}>
+
+                              <SaveButton onClick={() => { handleSave(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2) }} />
+                              <UndoButton onClick={() => { handleUndo(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2) }} />
+                            </Stack>
+                          )}
+                        </Stack>
+
+                      </Box>
+                    </Stack>
+
+                    <DeleteIconButton onClick={() => {
+                      setFormData((prevState) => ({
+                        ...prevState,
+                        details: {
+                          rushs: undefined,
+                          video: undefined,
+                          frequence: undefined
+                        }
+                      }))
+                    }}
+      
+                    />
+
                   </Stack>
-                </Box>
+
+                ) : (
+                  <AddButton
+                    onClick={() =>
+                      setFormData((prevState) => ({
+                        ...prevState,
+                        details: {
+                          ...prevState.details,  // Conserve les autres valeurs de details
+                          rushs: "",
+                          video: "",
+                          frequence: ""
+                        }
+                      }))
+                    }
+                    text={"Ajouter des détails"}
+                  />
+                )}
               </Stack>
-            </Stack>
-          </CardContent>
-        </Card>
+
+
+
+            </CardContent>
+          </Card>
+        </Grow>
 
 
         <Card elevation={2} sx={{ borderRadius: 2 }} className="card5">
