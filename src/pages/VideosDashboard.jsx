@@ -62,30 +62,31 @@ function VideoDashboard() {
 
   const navigate = useNavigate();
 
-  const handleEdit = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
+  const handleEdit = (setModifMod, setListeActive) => {
 
     setModifMod(true);
-    setActiveDetailsFreq(''); 
-    setActiveDetailsSlide1(''); 
-    setActiveDetailsSlide2('');
+    for (let i = 0; i < listeActive.length; i++) {
+      setListeActive[i]('');
+    }
     console.log("Bouton Cliqué");
   };
 
-  const handleSave = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
+  const handleSave = (setModifMod, setListeActive) => {
     setModifMod(false);
-    setActiveDetailsFreq(null);
-    setActiveDetailsSlide1(null);
-    setActiveDetailsSlide2(null);
+    for (let i = 0; i < listeActive.length; i++) {
+      setListeActive[i]('');
 
-    setFormData((prevData) => ({
-      ...prevData,
-      details: {
-        rushs: activeDetailsSlide1,
-        video: activeDetailsSlide2,
-        frequence: activeDetailsFreq
-      }
-    }))
+      setFormData((prevData) => ({
+        ...prevData,
+        details: {
+          rushs: activeDetailsSlide1,
+          video: activeDetailsSlide2,
+          frequence: activeDetailsFreq
+        }
+      }))
+    }
   }
+
 
   const handleUndo = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
     setModifMod(false);
@@ -770,12 +771,12 @@ function VideoDashboard() {
                         <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
                           Durée rushs estimée
                         </Typography>
-                        <BtnDetails modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails1={setActiveDetails} formData={formData} setFormData={setFormData}/>
+                        <BtnDetails modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails1={setActiveDetails} formData={formData} setFormData={setFormData} />
                         <Divider />
                         <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
                           Durée vidéo estimée
                         </Typography>
-                        <BtnDetails modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails2={setActiveDetails} formData={formData} setFormData={setFormData}/>
+                        <BtnDetails modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails2={setActiveDetails} formData={formData} setFormData={setFormData} />
                       </Stack>
                       <Divider orientation="vertical" flexItem />
                       <Box sx={{ width: "50%", display: "flex" }}>
@@ -809,7 +810,7 @@ function VideoDashboard() {
                         }
                       }))
                     }}
-      
+
                     />
 
                   </Stack>
