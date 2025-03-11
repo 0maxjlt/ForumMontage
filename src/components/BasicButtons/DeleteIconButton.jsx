@@ -7,7 +7,7 @@ function DeleteIconButton({ onClick }) {
             variant="contained"
             color="error"
             onClick={onClick}
-            sx={{ display:"flex", justifyContent: "center", alignItems: "center", width: '10%' }}
+           
         >
             <DeleteIcon />
         </Button>

@@ -62,30 +62,32 @@ function VideoDashboard() {
 
   const navigate = useNavigate();
 
-  const handleEdit = (setModifMod, setListeActive) => {
+  const handleEdit = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
 
     setModifMod(true);
-    for (let i = 0; i < listeActive.length; i++) {
-      setListeActive[i]('');
-    }
-    console.log("Bouton Cliqué");
+    setActiveDetailsFreq('');
+    setActiveDetailsSlide1('');
+    setActiveDetailsSlide2('');
+    console.log("Edit");
   };
 
-  const handleSave = (setModifMod, setListeActive) => {
+  const handleSave = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
     setModifMod(false);
-    for (let i = 0; i < listeActive.length; i++) {
-      setListeActive[i]('');
+    setActiveDetailsFreq(null);
+    setActiveDetailsSlide1(null);
+    setActiveDetailsSlide2(null);
+    console.log("Sauvegardé");
 
-      setFormData((prevData) => ({
-        ...prevData,
-        details: {
-          rushs: activeDetailsSlide1,
-          video: activeDetailsSlide2,
-          frequence: activeDetailsFreq
-        }
-      }))
-    }
+    setFormData((prevData) => ({
+      ...prevData,
+      details: {
+        rushs: activeDetailsSlide1,
+        video: activeDetailsSlide2,
+        frequence: activeDetailsFreq
+      }
+    }))
   }
+
 
 
   const handleUndo = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
@@ -771,12 +773,12 @@ function VideoDashboard() {
                         <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
                           Durée rushs estimée
                         </Typography>
-                        <BtnDetails modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails1={setActiveDetails} formData={formData} setFormData={setFormData} />
+                        <BtnDetails modifDetails={modifDetails} activeDetailsSlide1={activeDetailsSlide1} setActiveDetailsSlide1={setActiveDetailsSlide1} formData={formData} setFormData={setFormData} />
                         <Divider />
                         <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
                           Durée vidéo estimée
                         </Typography>
-                        <BtnDetails modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails2={setActiveDetails} formData={formData} setFormData={setFormData} />
+                        <BtnDetails modifDetails={modifDetails} activeDetailsSlide1={activeDetailsSlide1} setActiveDetailsSlide1={setActiveDetailsSlide1} formData={formData} setFormData={setFormData} />
                       </Stack>
                       <Divider orientation="vertical" flexItem />
                       <Box sx={{ width: "50%", display: "flex" }}>
@@ -784,10 +786,9 @@ function VideoDashboard() {
 
 
                         <Stack direction="column" spacing={1} sx={{ width: "100%" }}>
-                          <BtnFrequences modifDetails={modifDetails} activeDetails={activeDetails} setActiveDetails3={setActiveDetails} formData={formData} setFormData={setFormData} />
+                          <BtnFrequences modifDetails={modifDetails} activeDetailsFreq={activeDetailsFreq} setActiveDetailsFreq={setActiveDetailsFreq} formData={formData} setFormData={setFormData} />
 
-                          {!modifDetails ? (
-                            <EditButton onClick={() => handleEdit(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2)} />
+                          {!modifDetails ? (<></>
                           ) : (
                             <Stack direction="row" spacing={1}>
 
@@ -799,22 +800,24 @@ function VideoDashboard() {
 
                       </Box>
                     </Stack>
+                    <Stack display={"flex"} direction="row" spacing={2} sx={{ width: "30%"}}>
+                      <EditButton onClick={() => handleEdit(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2)} />
 
-                    <DeleteIconButton onClick={() => {
-                      setFormData((prevState) => ({
-                        ...prevState,
-                        details: {
-                          rushs: undefined,
-                          video: undefined,
-                          frequence: undefined
-                        }
-                      }))
-                    }}
+                      <DeleteIconButton onClick={() => {
+                        setFormData((prevState) => ({
+                          ...prevState,
+                          details: {
+                            rushs: undefined,
+                            video: undefined,
+                            frequence: undefined
+                          }
+                        }))
+                      }}
 
-                    />
+                      />
 
+                    </Stack>
                   </Stack>
-
                 ) : (
                   <AddButton
                     onClick={() =>

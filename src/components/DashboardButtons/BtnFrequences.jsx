@@ -19,7 +19,7 @@ const publicationFrequencies = [
   'Occasionnelle',
 ];
 
-export default function BtnFrequences({ modifDetails, formData, setFormData, activeDetails, setActiveDetails }) {
+export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActiveDetailsFreq, formData, setFormData }) {
   const [open, setOpen] = React.useState(false);
   const [dialogValue, setDialogValue] = React.useState('');
 
@@ -33,15 +33,21 @@ export default function BtnFrequences({ modifDetails, formData, setFormData, act
     if (dialogValue.trim() !== '') {
       if (!publicationFrequencies.includes(dialogValue)) {
         publicationFrequencies.push(dialogValue);
-        setActiveDetails(dialogValue);
+        setActiveDetailsFreq(dialogValue);
       }
       else{
-        setActiveDetails(dialogValue);
+        setActiveDetailsFreq(dialogValue);
       }
       
     }
     handleClose();
   };
+
+  React.useEffect(() => {
+    formData.details.frequence === undefined ? handleClose() : console.log('formData.details.frequence : ', formData.details.frequence);
+  }
+  , [formData.details.frequence])
+    ;
 
   React.useEffect(() => {
     console.log('details : ', formData.details.frequence);
@@ -52,7 +58,7 @@ export default function BtnFrequences({ modifDetails, formData, setFormData, act
       <FormControl fullWidth>
         <InputLabel>Fréquence</InputLabel>
         <Select
-          value={activeDetails || formData.details.frequence || ''}
+          value={activeDetailsFreq || formData.details.frequence || ''}
           label="Fréquence"
           disabled={!modifDetails}
           onChange={(event) => {
@@ -61,7 +67,7 @@ export default function BtnFrequences({ modifDetails, formData, setFormData, act
               setDialogValue('');
               setOpen(true);
             } else {
-              setActiveDetails(newValue);
+              setActiveDetailsFreq(newValue);
             }
           }}
         >

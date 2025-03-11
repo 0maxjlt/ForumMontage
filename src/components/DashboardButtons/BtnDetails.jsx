@@ -4,9 +4,9 @@ import Typography from '@mui/material/Typography';
 import Slider from '@mui/material/Slider';
 import { Stack } from '@mui/material';
 
-function BtnDetails() {
+function BtnDetails({modifDetails, activeDetailsSlide1, setActiveDetailsSlide1, formData, setFormData}) {
     const [value, setValue] = React.useState([0, 5]); // Min and max indices
-
+    
     // List of actual values
     const realValues = [0, 1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 60, 90, "120+"];
 
@@ -36,7 +36,7 @@ function BtnDetails() {
             </Typography>
             </Stack>
             <Slider
-
+                disabled={!modifDetails}
                 min={0}
                 max={realValues.length - 1} // Max index
                 step={1}
