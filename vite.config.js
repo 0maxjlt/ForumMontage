@@ -1,7 +1,6 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react-swc'
 
-// Configuratio de base pour Vite avec React
 export default defineConfig({
-  plugins: [react()],
-});
+  plugins: [react()]
+})
