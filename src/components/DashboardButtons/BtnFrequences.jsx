@@ -19,17 +19,22 @@ const publicationFrequencies = [
   'Occasionnelle',
 ];
 
-export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActiveDetailsFreq, formData, setFormData }) {
+export default function BtnFrequences({ setModifDetails, modifDetails, activeDetailsFreq, setActiveDetailsFreq, formData, setFormData, detSaved, detUndone, setDetSaved, setDetUndone }) {
   const [open, setOpen] = React.useState(false);
   const [dialogValue, setDialogValue] = React.useState('');
 
   const handleClose = () => {
     setDialogValue('');
     setOpen(false);
+    setModifDetails(false);
+    setDetSaved(false);
+    setDetUndone(false);
+    
+
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  const handleSubmit = () => {
+    console.log('Submit');
     if (dialogValue.trim() !== '') {
       if (!publicationFrequencies.includes(dialogValue)) {
         publicationFrequencies.push(dialogValue);
@@ -44,6 +49,15 @@ export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActi
   };
 
   React.useEffect(() => {
+    if (detSaved) {
+      handleSubmit();
+    }
+    if (detUndone) {
+      handleClose();
+    }
+  }, [detSaved, detUndone]);
+
+  React.useEffect(() => {
     formData.details.frequence === undefined ? handleClose() : console.log('formData.details.frequence : ', formData.details.frequence);
   }
   , [formData.details.frequence])
@@ -51,15 +65,15 @@ export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActi
 
   React.useEffect(() => {
     console.log('details : ', formData.details.frequence);
-  }, [formData.details.frequence]);
+  }, [formData.details]);
 
   return (
     <>
       <FormControl fullWidth>
-        <InputLabel>Fréquence</InputLabel>
+        <InputLabel> {formData.details.frequence || 'Fréquence'} </InputLabel>
         <Select
           value={activeDetailsFreq || formData.details.frequence || ''}
-          label="Fréquence"
+          label="|| "
           disabled={!modifDetails}
           onChange={(event) => {
             const newValue = event.target.value;
