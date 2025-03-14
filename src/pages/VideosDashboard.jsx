@@ -58,7 +58,8 @@ function VideoDashboard() {
   const [activeDetailsSlide2, setActiveDetailsSlide2] = useState(null);
   const [activeDetailsFreq, setActiveDetailsFreq] = useState(null);
 
-  const [freqValue, setFreqValue] = React.useState(null);
+  const [detSaved, setDetSaved] = useState(false);
+  const [detUndone, setDetUndone] = useState(false);
 
   const navigate = useNavigate();
 
@@ -786,13 +787,13 @@ function VideoDashboard() {
 
 
                         <Stack direction="column" spacing={1} sx={{ width: "100%" }}>
-                          <BtnFrequences modifDetails={modifDetails} activeDetailsFreq={activeDetailsFreq} setActiveDetailsFreq={setActiveDetailsFreq} formData={formData} setFormData={setFormData} />
-
+                          <BtnFrequences setModifDetails={setModifDetails} modifDetails={modifDetails} activeDetailsFreq={activeDetailsFreq} setActiveDetailsFreq={setActiveDetailsFreq} formData={formData} setFormData={setFormData} detSaved={detSaved} detUndone={detUndone} setDetSaved={setDetSaved} setDetUndone={setDetUndone}/>
+ 
                           {!modifDetails ? (<></>
                           ) : (
                             <Stack direction="row" spacing={1}>
 
-                              <SaveButton onClick={() => { handleSave(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2) }} />
+                              <SaveButton onClick={() => { handleSave(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2); }} />
                               <UndoButton onClick={() => { handleUndo(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2) }} />
                             </Stack>
                           )}
@@ -800,21 +801,28 @@ function VideoDashboard() {
 
                       </Box>
                     </Stack>
-                    <Stack display={"flex"} direction="row" spacing={2} sx={{ width: "30%"}}>
-                      <EditButton onClick={() => handleEdit(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2)} />
+                    <Stack display={"flex"} direction="row" spacing={2} sx={{ width: "30%" }}>
 
-                      <DeleteIconButton onClick={() => {
-                        setFormData((prevState) => ({
-                          ...prevState,
-                          details: {
-                            rushs: undefined,
-                            video: undefined,
-                            frequence: undefined
-                          }
-                        }))
-                      }}
+                      {!modifDetails ? (
+                        <>
+                          <EditButton onClick={() => handleEdit(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2)} />
 
-                      />
+                          <DeleteIconButton onClick={() => {
+                            setFormData((prevState) => ({
+                              ...prevState,
+                              details: {
+                                rushs: undefined,
+                                video: undefined,
+                                frequence: undefined
+                              }
+                            }))
+                          }}
+
+                          />
+                        </>) : (<>
+                          <SaveButton onClick={() => {setDetSaved(true)}} />
+                          <UndoButton onClick={() => {setDetUndone(true)}} />
+                        </>)}
 
                     </Stack>
                   </Stack>
