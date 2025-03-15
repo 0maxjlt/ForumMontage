@@ -789,14 +789,7 @@ function VideoDashboard() {
                         <Stack direction="column" spacing={1} sx={{ width: "100%" }}>
                           <BtnFrequences setModifDetails={setModifDetails} modifDetails={modifDetails} activeDetailsFreq={activeDetailsFreq} setActiveDetailsFreq={setActiveDetailsFreq} formData={formData} setFormData={setFormData} detSaved={detSaved} detUndone={detUndone} setDetSaved={setDetSaved} setDetUndone={setDetUndone}/>
  
-                          {!modifDetails ? (<></>
-                          ) : (
-                            <Stack direction="row" spacing={1}>
-
-                              <SaveButton onClick={() => { handleSave(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2); }} />
-                              <UndoButton onClick={() => { handleUndo(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2) }} />
-                            </Stack>
-                          )}
+                      
                         </Stack>
 
                       </Box>
@@ -820,8 +813,10 @@ function VideoDashboard() {
 
                           />
                         </>) : (<>
-                          <SaveButton onClick={() => {setDetSaved(true)}} />
-                          <UndoButton onClick={() => {setDetUndone(true)}} />
+
+                          <SaveButton onClick={() => { handleSave(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2); }} />
+                          <UndoButton onClick={() => { handleUndo(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2) }} />
+                       
                         </>)}
 
                     </Stack>
