@@ -9,13 +9,13 @@ import AddIcon from "@mui/icons-material/Add";
 import Grow from '@mui/material/Grow';
 import BtnDetails from "../components/DashboardButtons/BtnDetails";
 import BtnFrequences from "../components/DashboardButtons/BtnFrequences";
-
+import InfoIcon from '@mui/icons-material/Info';
 import EditButton from "../components/BasicButtons/EditButton";
 import SaveButton from "../components/BasicButtons/SaveButton";
 import UndoButton from "../components/BasicButtons/UndoButton";
 import AddButton from "../components/BasicButtons/AddButton";
 import DeleteIconButton from "../components/BasicButtons/DeleteIconButton";
-import { color } from "framer-motion";
+import { color, m } from "framer-motion";
 
 function VideoDashboard() {
   console.log("Re-render détecté"); // ✅ Vérifier si le composant se rafraîchit en boucle
@@ -165,64 +165,40 @@ function VideoDashboard() {
 
   return (
     <>
-      <Box sx={{
-        position: 'relative',
-        display: 'inline-block',
-        textAlign: 'center',
-        marginBottom: '20px', // Espacement en bas pour bien séparer du reste
-        padding: '20px 0'
-      }}>
-        <Typography
-          variant="h4"
-          fontWeight="bold"
-          sx={{
-            letterSpacing: 3,
-            background: "linear-gradient(45deg,rgb(147, 87, 212),rgb(107, 161, 254))", // Dégradé de couleurs plus douces
-            backgroundClip: "text",
-            color: "transparent",
-            fontSize: "3rem", // Augmenter la taille pour un effet imposant
-            textTransform: "uppercase",
-            textShadow: "2px 2px 4px rgba(0, 0, 0, 0.6)", // Ombre du texte
-            padding: "10px 0",
-            transition: "all 0.5s ease-in-out", // Transition fluide pour les effets
-            position: "relative",
-            zIndex: 1,
-            '&:hover': {
-              textShadow: "4px 4px 8px rgba(0, 0, 0, 0.8)", // Ombre plus prononcée au survol
-            },
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              opacity: 0.1,
-              zIndex: -1,
-              transition: "opacity 0.3s ease-in-out", // Effet d'opacité en transition
-            },
-            '&:hover::after': {
-              opacity: 0.2, // L'ombre s'intensifie au survol
-            }
-          }}
-        >
-          Détails
-        </Typography>
-
-        {/* Optionnel : un petit icône en bas ou autour du titre */}
-        <Box sx={{
-          marginTop: '10px',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}>
-          <Typography variant="subtitle1" sx={{ fontSize: '1.1rem', color: "#fff", fontWeight: 500 }}>
-            Ajoutez une description et une miniature pour une meilleure présentation
+      <div className="title">
+        
+        <Stack mt={5}>
+          
+          <Typography
+            variant="h3"
+            fontWeight="bold"
+            sx={{ display: "flex", alignItems: "left", ml: 2, mb: 1 }}
+          >
+            Détails
           </Typography>
-        </Box>
-      </Box>
+         
+          <Stack
+            sx={{
+              color: "text.secondary",
+              ml: 4,
+              display: 'flex',
+              flexDirection: 'row',
+              gap: 2,
+              mb: 10
+            }}
+          >
+           
+            <InfoIcon />
+            <Typography
+              variant="subtitle1"
+            >
+              Ajoutez des détails à votre vidéo pour mieux l'organiser.
+            </Typography>
+          </Stack>
+        </Stack>
+     
 
-
+    </div >
 
       <div className="wrapper">
 
@@ -787,9 +763,9 @@ function VideoDashboard() {
 
 
                         <Stack direction="column" spacing={1} sx={{ width: "100%" }}>
-                          <BtnFrequences setModifDetails={setModifDetails} modifDetails={modifDetails} activeDetailsFreq={activeDetailsFreq} setActiveDetailsFreq={setActiveDetailsFreq} formData={formData} setFormData={setFormData} detSaved={detSaved} detUndone={detUndone} setDetSaved={setDetSaved} setDetUndone={setDetUndone}/>
- 
-                      
+                          <BtnFrequences setModifDetails={setModifDetails} modifDetails={modifDetails} activeDetailsFreq={activeDetailsFreq} setActiveDetailsFreq={setActiveDetailsFreq} formData={formData} setFormData={setFormData} detSaved={detSaved} detUndone={detUndone} setDetSaved={setDetSaved} setDetUndone={setDetUndone} />
+
+
                         </Stack>
 
                       </Box>
@@ -816,7 +792,7 @@ function VideoDashboard() {
 
                           <SaveButton onClick={() => { handleSave(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2); }} />
                           <UndoButton onClick={() => { handleUndo(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2) }} />
-                       
+
                         </>)}
 
                     </Stack>
