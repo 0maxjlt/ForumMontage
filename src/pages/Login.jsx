@@ -6,7 +6,7 @@ import { Button } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
 import Popup from "../components/Popup";
-import MyBreadcrumbs from "../components/Breadcrumbs";
+import MyBreadcrumbs from "../components/Header";
 
 function Login() {
     const [email, setEmail] = useState("");
@@ -56,9 +56,9 @@ function Login() {
                     divider={<Divider orientation="vertical" flexItem />}
                     sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
                 >
-                    <TextField id="email" label="email" color={error === null : 'primary' : 'error'} focused className="w-full border p-2 mb-2" value={email}
+                    <TextField id="email" label="email" color={error === null ? 'primary' : 'error'} focused className="w-full border p-2 mb-2" value={email}
                         onChange={(e) => setEmail(e.target.value)} />
-                    <TextField id="mdp" label="mot de passe" color={error === null : 'primary' : 'error'} focused type="password" className="w-full border p-2 mb-2" value={password}
+                    <TextField id="mdp" label="mot de passe" color={error === null ? 'primary' : 'error'} focused type="password" className="w-full border p-2 mb-2" value={password}
                         onChange={(e) => setPassword(e.target.value)} />
 
                     <Button id="submit" variant="outlined" onClick={handleSubmit} disabled={email.length == 0 || password.length == 0} className="bg-blue-500 text-white px-4 py-2 w-full rounded">Se connecter</Button>

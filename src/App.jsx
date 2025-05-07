@@ -13,8 +13,9 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import VideosDashboard from "./pages/VideosDashboard";
+import Forum from "./pages/Forum";
 import Layout from './components/Layout';
-import MyBreadcrumbs from './components/Breadcrumbs';
+import MyBreadcrumbs from './components/Header';
 
 
 
@@ -38,6 +39,7 @@ function App() {
                 <Route path="/login" element={<Login />} />  {/* Route de connexion */}
                 <Route path="/dashboard" element={<Dashboard />} />  {/* Route de connexion */}
                 <Route path ="/dashboard/:id" element={<VideosDashboard />} />
+                <Route path = "/Forum" element={<Forum />} />
               </Route>
             </Routes>
         </Router>

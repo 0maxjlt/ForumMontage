@@ -6,7 +6,7 @@ import CardMedia from '@mui/material/CardMedia';
 import Typography from '@mui/material/Typography';
 import CardActionArea from '@mui/material/CardActionArea';
 import Grid2 from '@mui/material/Grid2';
-import MyBreadcrumbs from "../components/Breadcrumbs";
+import MyBreadcrumbs from "../components/Header";
 
 function Dashboard() {
     const [user, setUser] = useState(() => {
