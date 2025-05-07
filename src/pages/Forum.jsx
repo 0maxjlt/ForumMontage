@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -11,9 +11,12 @@ import {
   Tooltip
 } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
+import { useNavigate } from "react-router-dom";
 
 function Forum() {
   const [videos, setVideos] = useState([]);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch("http://localhost:3001/forum", {
@@ -47,27 +50,33 @@ function Forum() {
         Forum – Propositions de vidéos
       </Typography>
 
-      <Grid2 container spacing={4} justifyContent={"center"} textAlign={"left"}> 
-        
+      <Grid2 container spacing={4} justifyContent={"center"} textAlign={"left"}>
+
         {videos.map((video) => (
-          <Grid2 item xs={12} sm={6} md={4} key={video.id} maxWidth={400}>
+          <Grid2 item xs={12} sm={6} md={4} key={video.id} maxWidth={400} onClick={() => navigate(`/forum/${video.id}`)}>
             <Card
               sx={{
                 bgcolor: "#161b22",
                 color: "white",
                 borderRadius: 3,
                 boxShadow: "0px 4px 20px rgba(0,0,0,0.3)",
-                transition: "transform 0.2s ease-in-out",
+                transition: "transform 0.3s ease-in-out, background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
                 "&:hover": {
-                  transform: "scale(1.015)",
+                  transform: "scale(1.025)",
+                  boxShadow: "0px 4px 30px rgba(0,0,0,0.5)",
+                  bgcolor: "#21262d",
                 },
+                cursor: "pointer",
               }}
+
+              
             >
+
               <CardContent >
                 {/* Header */}
                 <Box display="flex" alignItems="center" mb={2}>
                   <Avatar sx={{ bgcolor: "#30363d", mr: 2 }}>
-                    <PersonIcon /> 
+                    <PersonIcon />
                   </Avatar>
                   <Box >
                     <Typography
@@ -92,7 +101,7 @@ function Forum() {
                     variant="h6"
                     fontWeight="600"
                     noWrap
-                    
+
                   >
                     {video.title}
                   </Typography>
