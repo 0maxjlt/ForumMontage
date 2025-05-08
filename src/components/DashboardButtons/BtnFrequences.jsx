@@ -72,7 +72,7 @@ export default function BtnFrequences({ setModifDetails, modifDetails, activeDet
       <FormControl fullWidth>
         <InputLabel>{formData.details.frequence == undefined ? 'Fréquence' : ''}</InputLabel>
         <Select
-          value={activeDetailsFreq || ''}
+          value={activeDetailsFreq || formData.details.frequence || ''}
           label="|| "
           disabled={!modifDetails}
           onChange={handleSelectChange}
