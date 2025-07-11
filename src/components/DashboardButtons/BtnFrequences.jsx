@@ -9,6 +9,7 @@ import SaveButton from '../BasicButtons/SaveButton';
 import UndoButton from '../BasicButtons/UndoButton';
 import Zoom from '@mui/material/Zoom';
 import Fade from '@mui/material/Fade';
+import react from '@vitejs/plugin-react-swc';
 
 const publicationFrequencies = [
   'Personnalisée',
@@ -19,7 +20,7 @@ const publicationFrequencies = [
   'Occasionnelle',
 ];
 
-export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActiveDetailsFreq, formData, setFormData }) {
+export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActiveDetailsFreq, formData, setFormData, detailsSaved, detailsUndone }) {
   const [open, setOpen] = React.useState(false);
   const [dialogValue, setDialogValue] = React.useState('');
 
@@ -28,8 +29,7 @@ export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActi
     setOpen(false);
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  const handleSubmit = (  ) => {
     if (dialogValue.trim() !== '') {
       if (!publicationFrequencies.includes(dialogValue)) {
         publicationFrequencies.push(dialogValue);
@@ -52,6 +52,17 @@ export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActi
   React.useEffect(() => {
     console.log('details : ', formData.details.frequence);
   }, [formData.details.frequence]);
+
+  React.useEffect(() => {
+    if (detailsSaved) {
+      handleSubmit();
+    }
+    if (detailsUndone) {
+      handleClose();
+    }
+  }
+  , [detailsSaved, detailsUndone])
+    
 
   return (
     <>
@@ -93,8 +104,7 @@ export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActi
           />
         </DialogContent>
         <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2} sx={{ p: 2 }}>
-          <SaveButton onClick={handleSubmit} />
-          <UndoButton onClick={handleClose} />
+
         </Stack>
       </Dialog>
     </>

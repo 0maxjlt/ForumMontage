@@ -39,7 +39,7 @@ function VideoDashboard() {
 
 
   const [load, setLoad] = useState(false);
-  const [cardsVisibility, setCardsVisibility] = useState([false, false, false, false, false]);
+  const [cardsVisibility, setCardsVisibility] = useState([false, false, false, false, false, false]);
 
   const [activeTitle, setActiveTitle] = useState(null);
   const [modifTitle, setModifTitle] = useState(false);
@@ -57,8 +57,9 @@ function VideoDashboard() {
   const [activeDetailsSlide1, setActiveDetailsSlide1] = useState(null);
   const [activeDetailsSlide2, setActiveDetailsSlide2] = useState(null);
   const [activeDetailsFreq, setActiveDetailsFreq] = useState(null);
+  const [detailsSaved, setDetailsSaved] = useState(false);
+  const [detailsUndone, setDetailsUndone] = useState(false);
 
-  const [freqValue, setFreqValue] = React.useState(null);
 
   const navigate = useNavigate();
 
@@ -225,7 +226,7 @@ function VideoDashboard() {
 
       <div className="wrapper">
 
-        <Grow in={cardsVisibility[0]} style={{ transformOrigin: 'center' }} {...(load ? { timeout: 1000 } : {})}>
+        <Grow in={cardsVisibility[1]} style={{ transformOrigin: 'center' }} {...(load ? { timeout: 1000 } : {})}>
 
           <Card className="description" sx={{ height: 300, borderRadius: 3, textAlign: "center", transition: "all 0.3s ease-in-out", "&:hover": { transform: "scale(1.02)" } }}>
             <CardContent sx={{ flexGrow: 1 }}>
@@ -355,7 +356,7 @@ function VideoDashboard() {
         </Grow>
 
 
-        <Grow in={cardsVisibility[1]}
+        <Grow in={cardsVisibility[2]}
           style={{ transformOrigin: 'center' }}
           {...(load ? { timeout: 1000 } : {})}>
           <Card
@@ -480,7 +481,7 @@ function VideoDashboard() {
         </Grow>
 
 
-        <Grow in={cardsVisibility[2]}
+        <Grow in={cardsVisibility[0]}
           style={{ transformOrigin: 'center' }}
           {...(load ? { timeout: 1000 } : {})}>
           <Card className="titre" sx={{ display: 'flex', flexDirection: 'column', height: 160, borderRadius: 3, textAlign: "center", transition: "all 0.3s ease-in-out", "&:hover": { transform: "scale(1.02)" } }}>
@@ -760,7 +761,7 @@ function VideoDashboard() {
           </Card>
         </Grow>
 
-        <Grow in={cardsVisibility[4]}
+        <Grow in={cardsVisibility[5]}
           style={{ transformOrigin: 'center' }}
           {...(load ? { timeout: 1000 } : {})}>
           <Card className="details" sx={{ height: 300 }}>
@@ -786,7 +787,7 @@ function VideoDashboard() {
 
 
                         <Stack direction="column" spacing={1} sx={{ width: "100%" }}>
-                          <BtnFrequences modifDetails={modifDetails} activeDetailsFreq={activeDetailsFreq} setActiveDetailsFreq={setActiveDetailsFreq} formData={formData} setFormData={setFormData} />
+                          <BtnFrequences modifDetails={modifDetails} activeDetailsFreq={activeDetailsFreq} setActiveDetailsFreq={setActiveDetailsFreq} formData={formData} setFormData={setFormData} detailSaved={detailSaved} detailUndone={detailUndone} />
 
                           {!modifDetails ? (<></>
                           ) : (
@@ -800,21 +801,29 @@ function VideoDashboard() {
 
                       </Box>
                     </Stack>
-                    <Stack display={"flex"} direction="row" spacing={2} sx={{ width: "30%"}}>
-                      <EditButton onClick={() => handleEdit(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2)} />
+                    <Stack display={"flex"} direction="row" spacing={2} sx={{ width: "30%" }}>
+                      {modifDetails ? (<>
 
-                      <DeleteIconButton onClick={() => {
-                        setFormData((prevState) => ({
-                          ...prevState,
-                          details: {
-                            rushs: undefined,
-                            video: undefined,
-                            frequence: undefined
-                          }
-                        }))
-                      }}
+                        <EditButton onClick={() => handleEdit(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2)} />
 
-                      />
+                        <DeleteIconButton onClick={() => {
+                          setFormData((prevState) => ({
+                            ...prevState,
+                            details: {
+                              rushs: undefined,
+                              video: undefined,
+                              frequence: undefined
+                            }
+                          }))
+                        }}
+                        />
+
+                      </>) : (<>
+                        <SaveButton onClick={setDetailsSaved(true)} />
+                        <UndoButton onClick={setDetailsUndone(true)} />
+                      </>)}
+
+
 
                     </Stack>
                   </Stack>
