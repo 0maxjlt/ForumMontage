@@ -4,12 +4,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import Button from '@mui/material/Button';
-import { FormControl, InputLabel, MenuItem, Select, Stack, Slide } from '@mui/material';
-import SaveButton from '../BasicButtons/SaveButton';
-import UndoButton from '../BasicButtons/UndoButton';
-import Zoom from '@mui/material/Zoom';
-import Fade from '@mui/material/Fade';
-import react from '@vitejs/plugin-react-swc';
+import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 
 const publicationFrequencies = [
   'Personnalisée',
@@ -20,38 +15,57 @@ const publicationFrequencies = [
   'Occasionnelle',
 ];
 
-export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActiveDetailsFreq, formData, setFormData, detailsSaved, detailsUndone }) {
+export default function BtnFrequences({ setModifDetails, modifDetails, activeDetailsFreq, setActiveDetailsFreq, formData, setFormData, detSaved, detUndone, setDetSaved, setDetUndone }) {
   const [open, setOpen] = React.useState(false);
   const [dialogValue, setDialogValue] = React.useState('');
+
+  React.useEffect(() => {
+    if (modifDetails && formData.details.frequence) {
+      setActiveDetailsFreq(formData.details.frequence);
+    }
+  }, [modifDetails, formData.details.frequence, setActiveDetailsFreq]);
 
   const handleClose = () => {
     setDialogValue('');
     setOpen(false);
   };
 
-  const handleSubmit = (  ) => {
-    if (dialogValue.trim() !== '') {
-      if (!publicationFrequencies.includes(dialogValue)) {
-        publicationFrequencies.push(dialogValue);
-        setActiveDetailsFreq(dialogValue);
-      }
-      else{
-        setActiveDetailsFreq(dialogValue);
-      }
-      
+  const handleSubmit = (event) => {
+    event?.preventDefault();
+    console.log('Submit');
+    if (dialogValue.trim() !== '' && !publicationFrequencies.includes(dialogValue)) {
+      publicationFrequencies.push(dialogValue);
     }
+    setActiveDetailsFreq(dialogValue);
     handleClose();
   };
 
   React.useEffect(() => {
-    formData.details.frequence === undefined ? handleClose() : console.log('formData.details.frequence : ', formData.details.frequence);
-  }
-  , [formData.details.frequence])
-    ;
+    if (detSaved) {
+      setFormData({
+        ...formData,
+        details: {
+          ...formData.details,
+          frequence: activeDetailsFreq,
+        },
+      });
+      setDetSaved(false);
+    }
+    if (detUndone) {
+      setActiveDetailsFreq(formData.details.frequence);
+      setDetUndone(false);
+    }
+  }, [detSaved, detUndone]);
 
-  React.useEffect(() => {
-    console.log('details : ', formData.details.frequence);
-  }, [formData.details.frequence]);
+  const handleSelectChange = (event) => {
+    const newValue = event.target.value;
+    if (newValue === 'Personnalisée') {
+      setDialogValue('');
+      setOpen(true);
+    } else {
+      setActiveDetailsFreq(newValue);
+    }
+  };
 
   React.useEffect(() => {
     if (detailsSaved) {
@@ -67,20 +81,12 @@ export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActi
   return (
     <>
       <FormControl fullWidth>
-        <InputLabel>Fréquence</InputLabel>
+        <InputLabel>{formData.details.frequence == undefined ? 'Fréquence' : ''}</InputLabel>
         <Select
           value={activeDetailsFreq || formData.details.frequence || ''}
-          label="Fréquence"
+          label="|| "
           disabled={!modifDetails}
-          onChange={(event) => {
-            const newValue = event.target.value;
-            if (newValue === 'Personnalisée') {
-              setDialogValue('');
-              setOpen(true);
-            } else {
-              setActiveDetailsFreq(newValue);
-            }
-          }}
+          onChange={handleSelectChange}
         >
           {publicationFrequencies.map((freq, index) => (
             <MenuItem key={index} value={freq}>
@@ -89,23 +95,23 @@ export default function BtnFrequences({ modifDetails, activeDetailsFreq, setActi
           ))}
         </Select>
       </FormControl>
-    
-    
-      <Dialog open={open} TransitionComponent={Zoom} onClose={handleClose}>
+
+      <Dialog open={open} onClose={handleClose}>
         <DialogTitle>Ajouter une option</DialogTitle>
         <DialogContent>
-          <TextField
-            margin="dense"
-            value={dialogValue}
-            onChange={(event) => setDialogValue(event.target.value)}
-            label="Nouvelle fréquence"
-            type="text"
-            fullWidth
-          />
+          <form onSubmit={handleSubmit}>
+            <TextField
+              margin="dense"
+              value={dialogValue}
+              onChange={(event) => setDialogValue(event.target.value)}
+              label="Nouvelle fréquence"
+              type="text"
+              fullWidth
+            />
+            <Button type="submit" color="primary">Ajouter</Button>
+            <Button onClick={handleClose} color="secondary">Annuler</Button>
+          </form>
         </DialogContent>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2} sx={{ p: 2 }}>
-
-        </Stack>
       </Dialog>
     </>
   );
