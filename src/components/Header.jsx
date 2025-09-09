@@ -25,15 +25,9 @@ function Header() {
       {/* Barre d'en-tête stylée */}
       <AppBar position="static" sx={{ boxShadow: 'none' }}>
         <Container maxWidth="lg">
-          <Toolbar disableGutters sx={{ justifyContent: 'space-between' }}>
+          <Toolbar sx={{ justifyContent: 'space-between' }}>
             {/* Logo / titre */}
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 'bold', color: '#fff', cursor: 'pointer' }}
-              onClick={() => navigate('/')}
-            >
-              🎬 Forum Montage
-            </Typography>
+ 
 
             {/* Menu de navigation */}
             <Box>
@@ -79,7 +73,7 @@ function Header() {
       </AppBar>
 
       {/* Breadcrumbs sous la barre */}
-      <Box sx={{ px: 3, py: 1.5}}>
+      {/* <Box sx={{ px: 3, py: 1.5}}> 
         <Container maxWidth="lg">
           <Breadcrumbs aria-label="breadcrumb" sx={{ color: 'white' }}>
             <Link underline="hover" color="inherit" onClick={() => navigate('/')} sx={{ cursor: 'pointer' }}>
@@ -108,6 +102,7 @@ function Header() {
           </Breadcrumbs>
         </Container>
       </Box>
+      */}
     </>
   );
 }

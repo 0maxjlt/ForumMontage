@@ -1,72 +1,135 @@
-
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { TextField } from '@mui/material';
-import { Button } from '@mui/material';
-import Stack from '@mui/material/Stack';
-import Divider from '@mui/material/Divider';
+import { TextField, Button, Stack, Typography, Box } from '@mui/material';
 import Popup from "../components/Popup";
-import MyBreadcrumbs from "../components/Header";
 
 function Login() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState(null);
-    const [popup, setPopup] = useState(null);
+  const [isRegister, setIsRegister] = useState(false);
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [fieldError, setFieldError] = useState(null); // pour les TextField
+  const [popupMessage, setPopupMessage] = useState(null); // pour le Popup
 
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const url = isRegister
+      ? "http://localhost:3001/api/register"
+      : "http://localhost:3001/api/login";
 
-        try {
-            const response = await fetch("http://localhost:3001/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
-            });
+    try {
+      const body = isRegister
+        ? { username, email, password }
+        : { email, password };
 
-            const result = await response.json(); // 🔥 Ici, on récupère bien un JSON
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-            if (result.success) {
-                console.log(result.data);
-                localStorage.setItem("user", JSON.stringify(result.data)); // 🔥 Stocke les données sous forme de JSON
-                navigate("/dashboard");
-            } else {
-                setError("Email ou mot de passe incorrect");
-                setPopup(true);
-            }
-        } catch (error) {
-            console.error("Erreur lors de l'envoi :", error);
-            setError("Une erreur est survenue");
+      const result = await response.json();
+
+      if (isRegister) {
+        // --- INSCRIPTION ---
+        if (!result.error) {
+          setFieldError(null); // réinitialise les champs
+          setPopupMessage("Inscription réussie ! Connectez-vous maintenant");
+          setIsRegister(false); // bascule vers login
+          setUsername("");
+          setEmail("");
+          setPassword("");
+        } else {
+          setFieldError(result.error);
+          setPopupMessage(result.error);
         }
-    };
+      } else {
+        // --- LOGIN ---
+        if (result.success) {
+          localStorage.setItem("token", result.token);
+          localStorage.setItem("user", JSON.stringify(result.user));
+          setFieldError(null);
+          navigate("/dashboard");
+        } else {
+          setFieldError(result.error || "Email ou mot de passe incorrect");
+          setPopupMessage(result.error || "Email ou mot de passe incorrect");
+        }
+      }
+    } catch (err) {
+      console.error("Erreur lors de l'envoi :", err);
+      setFieldError("Une erreur est survenue");
+      setPopupMessage("Une erreur est survenue");
+    }
+  };
 
-    return (
-        <>
+  return (
+    <>
+      {popupMessage && (
+        <Popup popup={popupMessage} setPopup={setPopupMessage} />
+      )}
 
-            {popup != null && <Popup popup={popup} setPopup={setPopup} />}
-            <div className="flex flex-col items-center justify-center min-h-screen center">
+      <Box display="flex" justifyContent="center" alignItems="center">
+        <Box width={350} m={4} p={4} boxShadow={3}>
+          <Typography variant="h5" textAlign="center" mb={3}>
+            {isRegister ? "Inscription" : "Connexion"}
+          </Typography>
 
-                <h1 className="text-2xl font-bold mb-4 center">Connexion</h1>
-                <Stack
-                    spacing={{ xs: 1, sm: 2 }}
-                    direction="row"
-                    useFlexGap
-                    divider={<Divider orientation="vertical" flexItem />}
-                    sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
-                >
-                    <TextField id="email" label="email" color={error === null ? 'primary' : 'error'} focused className="w-full border p-2 mb-2" value={email}
-                        onChange={(e) => setEmail(e.target.value)} />
-                    <TextField id="mdp" label="mot de passe" color={error === null ? 'primary' : 'error'} focused type="password" className="w-full border p-2 mb-2" value={password}
-                        onChange={(e) => setPassword(e.target.value)} />
+          <Stack spacing={2}>
+            {isRegister && (
+              <TextField
+                label="Nom d'utilisateur"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                error={!!fieldError}
+                helperText={fieldError && isRegister ? fieldError : ""}
+              />
+            )}
 
-                    <Button id="submit" variant="outlined" onClick={handleSubmit} disabled={email.length == 0 || password.length == 0} className="bg-blue-500 text-white px-4 py-2 w-full rounded">Se connecter</Button>
-                </Stack>
-            </div>
-        </>
-    );
+            <TextField
+              label="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={!!fieldError}
+              helperText={fieldError && !isRegister ? fieldError : ""}
+            />
 
+            <TextField
+              label="Mot de passe"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={!!fieldError}
+            />
+
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSubmit}
+              disabled={email.length === 0 || password.length === 0 || (isRegister && username.length === 0)}
+            >
+              {isRegister ? "S'inscrire" : "Se connecter"}
+            </Button>
+
+            <Button
+              variant="text"
+              color="secondary"
+              onClick={() => {
+                setIsRegister(!isRegister);
+                setFieldError(null);
+                setPopupMessage(null);
+              }}
+            >
+              {isRegister
+                ? "Vous avez déjà un compte ? Connectez-vous"
+                : "Pas encore de compte ? Inscrivez-vous"}
+            </Button>
+          </Stack>
+        </Box>
+      </Box>
+    </>
+  );
 }
 
 export default Login;

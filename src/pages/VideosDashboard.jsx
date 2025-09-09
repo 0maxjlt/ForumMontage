@@ -1,885 +1,416 @@
-import React, { act, use, useEffect, useState } from "react";
-import { Form, useNavigate, useParams } from "react-router-dom";
-import { CardContent, CardMedia, Divider, FormControl, FormLabel, Grid2, Radio, RadioGroup, Stack } from "@mui/material";
-import { Input, Button, Paper, TextField, Typography, Card, Box, CardActions } from "@mui/material";
-import { FormControlLabel } from "@mui/material";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import Skeleton from "@mui/material/Skeleton";
-import AddIcon from "@mui/icons-material/Add";
-import Grow from '@mui/material/Grow';
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  Card,
+  CardContent,
+  CardActions,
+  Typography,
+  TextField,
+  Button,
+  Stack,
+  Grid,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Grow,
+  Box,
+} from "@mui/material";
+
 import BtnDetails from "../components/DashboardButtons/BtnDetails";
 import BtnFrequences from "../components/DashboardButtons/BtnFrequences";
-import InfoIcon from '@mui/icons-material/Info';
-import EditButton from "../components/BasicButtons/EditButton";
-import SaveButton from "../components/BasicButtons/SaveButton";
-import UndoButton from "../components/BasicButtons/UndoButton";
-import AddButton from "../components/BasicButtons/AddButton";
-import DeleteIconButton from "../components/BasicButtons/DeleteIconButton";
-import { color, m } from "framer-motion";
 
 function VideoDashboard() {
-  console.log("Re-render détecté"); // ✅ Vérifier si le composant se rafraîchit en boucle
   const { id } = useParams();
-  const [user, setUser] = useState();
+  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    title: undefined,
-    description: undefined,
-    script: "",
-    date: "",
-    statut: null,
-    tags: [],
-    minia: undefined,
-    details: {
-      rushs: undefined,
-      video: undefined,
-      frequence: undefined
-    }
-  });
+  const [user, setUser] = useState(null);
+  const [video, setVideo] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  const [formData, setFormData] = useState({});
+  const [modif, setModif] = useState({ details: false }); // <--- ajouter details
+  const [activeFields, setActiveFields] = useState({});
+  const [cardsVisibility, setCardsVisibility] = useState(Array(9).fill(false));
 
-  const [load, setLoad] = useState(false);
-  const [cardsVisibility, setCardsVisibility] = useState([false, false, false, false, false, false]);
-
-  const [activeTitle, setActiveTitle] = useState(null);
-  const [modifTitle, setModifTitle] = useState(false);
-
-  const [activeDesc, setActiveDesc] = useState(null);
-  const [modifDescription, setModifDescription] = useState(false);
-
-  const [activestatut, setActivestatut] = useState("Terminé");
-  const [modifstatut, setModifstatut] = useState(false);
-
-  const [activeMinia, setActiveMinia] = useState(null);
-  const [modifMinia, setModifMinia] = useState(false);
-
+  // États pour les détails
   const [modifDetails, setModifDetails] = useState(false);
+  const [activeDetails, setActiveDetails] = useState({});
+  const [detailsSaved, setDetailsSaved] = useState(false);
+  const [detailsUndone, setDetailsUndone] = useState(false);
   const [activeDetailsSlide1, setActiveDetailsSlide1] = useState(null);
   const [activeDetailsSlide2, setActiveDetailsSlide2] = useState(null);
   const [activeDetailsFreq, setActiveDetailsFreq] = useState(null);
-  const [detailsSaved, setDetailsSaved] = useState(false);
-  const [detailsUndone, setDetailsUndone] = useState(false);
-
   const [detSaved, setDetSaved] = useState(false);
   const [detUndone, setDetUndone] = useState(false);
 
-  const navigate = useNavigate();
-
-  const handleEdit = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
-
-    setModifMod(true);
-    setActiveDetailsFreq('');
-    setActiveDetailsSlide1('');
-    setActiveDetailsSlide2('');
-    console.log("Edit");
-  };
-
-  const handleSave = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
-    setModifMod(false);
-    setActiveDetailsFreq(null);
-    setActiveDetailsSlide1(null);
-    setActiveDetailsSlide2(null);
-    console.log("Sauvegardé");
-
-    setFormData((prevData) => ({
-      ...prevData,
-      details: {
-        rushs: activeDetailsSlide1,
-        video: activeDetailsSlide2,
-        frequence: activeDetailsFreq
-      }
-    }))
-  }
-
-
-
-  const handleUndo = (setModifMod, setActiveDetailsSlide1, setActiveDetailsSlide2, setActiveDetailsFreq) => {
-    setModifMod(false);
-    setActiveDetailsFreq(null);
-    setActiveDetailsSlide1(null);
-    setActiveDetailsSlide2(null);
-    console.log("Annulé");
-    setFormData((prevData) => ({
-      ...prevData,
-      details: {
-        ...prevData.details
-      }
-    }))
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      // Crée une URL pour l'image sélectionnée
-      const imageUrl = URL.createObjectURL(file);
-      console.log("imageUrl", imageUrl);
-      setActiveMinia(imageUrl); // Me t à jour l'état avec l'URL de l'image
-    }
-  };
-
-
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const userParsed = JSON.parse(storedUser);
-      if (!userParsed.email) {
-        navigate("/login");
-      } else {
-        if (!userParsed.videos.find(v => v.id === id)) {
-          navigate("/dashboard");
-        }
-        setUser(userParsed);
-        setLoad(true);
+    if (!storedUser) return navigate("/login");
+    const userParsed = JSON.parse(storedUser);
+    setUser(userParsed);
 
-      }
-    } else {
-      navigate("/login");
-    }
-  }, [navigate, id]);
+    fetch(`http://localhost:3001/api/video_requests/${userParsed.id}/${id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) return navigate("/dashboard");
+        setVideo(data);
+        setFormData(data);
+        setLoading(false);
+      })
+      .catch(() => navigate("/dashboard"));
+  }, [id, navigate]);
 
   useEffect(() => {
-    console.log("formData", formData);
-  }, [formData]);
-
-  useEffect(() => {
-    // Fonction pour afficher chaque carte après un délai
     cardsVisibility.forEach((_, index) => {
       setTimeout(() => {
-        setCardsVisibility((prevVisibility) => {
-          const newVisibility = [...prevVisibility]; // Crée une copie de l'état précédent
-          newVisibility[index] = true;  // Change l'état pour rendre visible la carte à l'index actuel
-          return newVisibility;  // Retourne la nouvelle liste de visibilités
+        setCardsVisibility((prev) => {
+          const copy = [...prev];
+          copy[index] = true;
+          return copy;
         });
-      }, index * 100); // Décalage de 1 seconde pour chaque carte (1s pour la 1ère, 2s pour la 2ème, etc.)
+      }, index * 100);
     });
   }, []);
 
+  const handleSaveField = (field) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: activeFields[field] ?? prev[field],
+    }));
+    setModif((prev) => ({ ...prev, [field]: false }));
+    setActiveFields((prev) => ({ ...prev, [field]: null }));
+  };
 
-  if (!user) {
-    return <p>Chargement...</p>;
-  }
+  const handleUndoField = (field) => {
+    setModif((prev) => ({ ...prev, [field]: false }));
+    setActiveFields((prev) => ({ ...prev, [field]: null }));
+  };
 
-  const video = user.videos.find(video => video.id === id);
+  const cardStyle = {
+    borderRadius: 4,
+    p: 3,
+    boxShadow: "0 8px 16px rgba(0,0,0,0.5)",
+    backgroundColor: "#1e1e1e",
+    transition: "transform 0.2s, box-shadow 0.2s",
+    "&:hover": {
+      transform: "translateY(-5px)",
+      boxShadow: "0 12px 24px rgba(0,0,0,0.7)",
+    },
+  };
 
-  if (!video) {
-    return <p>Vidéo non trouvée.</p>;
-  }
+  const buttonStyle = {
+    textTransform: "none",
+    fontWeight: 600,
+  };
+
+  if (loading) return <Typography color="white">Chargement...</Typography>;
+  if (!video) return <Typography color="white">Vidéo introuvable</Typography>;
 
   return (
-    <>
-      <div className="title">
-        
-        <Stack mt={5}>
-          
-          <Typography
-            variant="h3"
-            fontWeight="bold"
-            sx={{ display: "flex", alignItems: "left", ml: 2, mb: 1 }}
-          >
-            Détails
-          </Typography>
-         
-          <Stack
-            sx={{
-              color: "text.secondary",
-              ml: 4,
-              display: 'flex',
-              flexDirection: 'row',
-              gap: 2,
-              mb: 10
-            }}
-          >
-           
-            <InfoIcon />
-            <Typography
-              variant="subtitle1"
-            >
-              Ajoutez des détails à votre vidéo pour mieux l'organiser.
-            </Typography>
-          </Stack>
-        </Stack>
-     
+    <Box py={6} px={2} bgcolor="#121212" minHeight="100vh">
+      <Typography variant="h3" fontWeight="bold" textAlign="center" color="white" mb={6}>
+        Détail de la demande vidéo
+      </Typography>
 
-    </div >
-
-      <div className="wrapper">
-
-        <Grow in={cardsVisibility[1]} style={{ transformOrigin: 'center' }} {...(load ? { timeout: 1000 } : {})}>
-
-          <Card className="description" sx={{ height: 300, borderRadius: 3, textAlign: "center", transition: "all 0.3s ease-in-out", "&:hover": { transform: "scale(1.02)" } }}>
-            <CardContent sx={{ flexGrow: 1 }}>
-              {formData.description !== undefined || modifDescription ? (
-                <Grow in={formData.description !== undefined || modifDescription} style={{ transformOrigin: 'center' }} {...(load ? { timeout: 1000 } : {})}>
-
+      <Grid container spacing={4} justifyContent="center">
+        {/* TITRE */}
+        <Grid xs={12} md={6}>
+          <Grow in={cardsVisibility[0]}>
+            <Card sx={cardStyle}>
+              <CardContent>
+                {modif.title ? (
                   <TextField
                     fullWidth
-                    slotProps={{ inputLabel: { shrink: true } }}
-                    label="Description"
-                    variant="outlined"
-                    multiline
-                    rows={8}
-                    value={activeDesc ?? formData.description}
-                    onChange={(e) => setActiveDesc(e.target.value)}
-                    disabled={!modifDescription}
-                    sx={{
-
-                      backgroundColor: modifDescription ? "#323232" : "transparent",
-                      borderRadius: 1,
-                      transition: "background-color 0.3s ease"
-                    }}
+                    label="Titre"
+                    value={activeFields.title ?? formData.title}
+                    onChange={(e) =>
+                      setActiveFields((prev) => ({ ...prev, title: e.target.value }))
+                    }
+                    InputProps={{ style: { color: "white" } }}
+                    InputLabelProps={{ style: { color: "lightgray" } }}
                   />
-                </Grow>
-              ) : (
-                <>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={() => {
-                      // Crée une fonction pour mettre à jour l'état ici.
-                      setFormData((prevState) => ({
-                        ...prevState,
-                        description: "", // Met la description à vide ou selon ton besoin
-                      }));
-                    }}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      height: 270,
-                      width: "100%",
-                    }}
-
-
-                  >
-                    <Typography variant="button" sx={{ fontWeight: 'bold' }}>
-                      Ajouter description
-                    </Typography>
-                  </Button>
-                </>
-              )}
-
-            </CardContent>
-            {formData.description !== undefined || modifDescription ? (
-              <CardActions sx={{ display: "flex", justifyContent: "center" }}>
-                {!modifDescription ? (
-                  <>
-                    <Button
-                      sx={{ width: "100%", height: '100%' }}
-                      size="small"
-                      variant="contained"
-                      color="secondary"
-
-                      onClick={() => {
-                        setModifDescription(true);
-                        setActiveDesc(null);
-                      }}
-                    >
-                      Modifier
-                    </Button>
-
-                    <Button
-                      size="small"
-                      color="error"
-                      variant="text"
-                      onClick={() => {
-                        setFormData((prevState) => ({
-                          ...prevState,
-                          description: undefined,
-                        }));
-                      }}
-                      sx={{ width: '100%' }} // Prend toute la largeur
-                    >
-                      Supprimer
-                    </Button>
-
-                  </>
-
                 ) : (
-                  <>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      color="success"
-                      onClick={() => {
-                        setModifDescription(false);
-                        setFormData((prevState) => ({
-                          ...prevState,
-                          description: activeDesc
-                        }));
-                        setActiveDesc(null);
-                      }}
-                      disabled={activeDesc == null}
-                    >
-                      Enregistrer
-                    </Button>
-
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={() => {
-                        setModifDescription(false);
-                        setActiveDesc(null);
-                        setFormData((prevState) => ({
-                          ...prevState
-                        }));
-                      }}
-                    >
-                      Annuler
-                    </Button>
-                  </>
-                )}
-              </CardActions>
-            ) : (<></>)}
-          </Card>
-        </Grow>
-
-
-        <Grow in={cardsVisibility[2]}
-          style={{ transformOrigin: 'center' }}
-          {...(load ? { timeout: 1000 } : {})}>
-          <Card
-            className="minia"
-            sx={{
-
-              borderRadius: 3,
-              width: "100%",
-              transition: "all 0.3s ease-in-out", "&:hover": { transform: "scale(1.02)" },
-              height: 300,
-
-            }}
-          >
-
-            {formData.minia !== undefined ? (
-              <CardMedia
-                component="img"
-                image={modifMinia ? activeMinia : formData.minia}
-              />) : (
-              <>
-                <CardContent sx={{ height: '100%' }}>
-                  <>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      startIcon={<AddIcon />}
-                      onClick={() => setFormData((prevState) => ({ ...prevState, minia: "" }))}
-                      sx={{ width: '100%', height: 270 }}
-                    >
-                      Ajouter une miniature
-                    </Button>
-                  </>
-                </CardContent>
-              </>)}
-
-            <Stack direction="column" sx={{ padding: 2 }}>
-              {!modifMinia ? (
-                <>
-                  {formData.minia === undefined ? (
-                    <>
-                    </>
-                  ) : (
-                    <>
-                      <Input
-                        type="file"
-                        id="fileInput"
-                        inputProps={{ accept: "image/*" }}
-                        onChange={(event) => {
-                          setModifMinia(true);
-                          setActiveMinia(null);
-                          handleFileChange(event);
-                        }}
-                        sx={{ display: 'none' }}
-                      />
-                      <label htmlFor="fileInput">
-                        <Button
-                          size="small"
-                          variant="contained"
-                          color="secondary"
-                          component="span"
-                          startIcon={<CloudUploadIcon />}
-                          sx={{ width: '100%', height: '100%' }} // Prend toute la largeur
-                        >
-                          Sélectionner une image
-                        </Button>
-                      </label>
-                    </>
-                  )}
-
-                  {formData.minia !== undefined && (
-                    <Button
-                      size="small"
-                      color="error"
-                      variant="text"
-                      onClick={() => {
-                        setFormData((prevState) => ({
-                          ...prevState,
-                          minia: undefined,
-                        }));
-                      }}
-                      sx={{ width: '100%', mt: 1 }} // Prend toute la largeur
-                    >
-                      Supprimer
-                    </Button>
-                  )}
-                </>
-              ) : (
-                <>
-
-                  <Button
-                    size="small"
-                    variant="contained"
-                    color="success"
-                    onClick={() => {
-                      setModifMinia(false);
-                      setFormData((prevState) => ({
-                        ...prevState,
-                        minia: activeMinia,
-                      }));
-                      setActiveMinia(null);
-                    }}
-                    sx={{ width: '100%' }}
-                  >
-                    Enregistrer
-                  </Button>
-                  <Button
-                    size="small"
-                    color="error"
-                    variant="contained"
-                    onClick={() => {
-                      setModifMinia(false);
-                      setActiveMinia(null);
-                    }}
-                    sx={{ width: '100%', mt: 1 }}
-                  >
-                    Annuler
-                  </Button>
-                </>
-              )}
-            </Stack>
-          </Card>
-        </Grow>
-
-
-        <Grow in={cardsVisibility[0]}
-          style={{ transformOrigin: 'center' }}
-          {...(load ? { timeout: 1000 } : {})}>
-          <Card className="titre" sx={{ display: 'flex', flexDirection: 'column', height: 160, borderRadius: 3, textAlign: "center", transition: "all 0.3s ease-in-out", "&:hover": { transform: "scale(1.02)" } }}>
-            <CardContent sx={{ flexGrow: 1 }}>
-              {formData.title !== undefined || modifTitle ? (
-                <TextField
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  fullWidth
-                  label="Titre"
-                  variant="outlined"
-                  multiline
-                  rows={2}
-                  value={activeTitle ?? formData.title}
-                  onChange={(e) => setActiveTitle(e.target.value)}
-                  disabled={!modifTitle}
-                  sx={{
-
-                    backgroundColor: modifTitle ? "#323232" : "transparent",
-                    borderRadius: 1,
-                    transition: "background-color 0.3s ease"
-                  }}
-                />
-              ) : (
-                <>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={() => {
-                      // Crée une fonction pour mettre à jour l'état ici.
-                      setFormData((prevState) => ({
-                        ...prevState,
-                        title: "", // Met la description à vide ou selon ton besoin
-                      }));
-                    }}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-
-                      height: 130,
-                      width: "100%",
-
-                    }}
-                  >
-                    <Typography variant="button" sx={{ fontWeight: 'bold' }}>
-                      Ajouter titre
-                    </Typography>
-                  </Button>
-                </>
-              )}
-
-            </CardContent>
-            {formData.title !== undefined || modifTitle ? (
-              <CardActions sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
-                {!modifTitle ? (
-                  <>
-                    <Button
-                      sx={{ width: '100%' }}
-                      size="small"
-                      variant="contained"
-                      color="secondary"
-
-                      onClick={() => {
-                        setModifTitle(true);
-                        setActiveTitle(null);
-                      }}
-                    >
-                      Modifier
-                    </Button>
-
-                    <Button
-                      size="small"
-                      color="error"
-                      variant="contained"
-                      onClick={() => {
-                        setFormData((prevState) => ({
-                          ...prevState,
-                          title: undefined,
-                        }));
-                      }}
-                      sx={{ width: '100%' }} // Prend toute la largeur
-                    >
-                      Supprimer
-                    </Button>
-
-                  </>
-
-                ) : (
-                  <>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      color="success"
-                      onClick={() => {
-                        setModifTitle(false);
-                        setFormData((prevState) => ({
-                          ...prevState,
-                          title: activeTitle
-                        }));
-                        setActiveTitle(null);
-                      }}
-                      disabled={activeTitle == null}
-
-                    >
-                      Enregistrer
-                    </Button>
-
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={() => {
-                        setModifTitle(false);
-                        setActiveTitle(null);
-                        setFormData((prevState) => ({
-                          ...prevState
-                        }));
-                      }}
-
-                    >
-                      Annuler
-                    </Button>
-                  </>
-                )}
-              </CardActions>
-            ) : (<></>)}
-          </Card>
-        </Grow>
-
-        <Grow in={cardsVisibility[3]}
-          style={{ transformOrigin: 'center' }}
-          {...(load ? { timeout: 1000 } : {})}>
-          <Card elevation={2} className="statut" sx={{
-            borderRadius: 2,
-            transition: "all 0.3s ease-in-out",
-            "&:hover": { transform: "scale(1.02)" },
-            height: 300 // Permet à la Card de s'étendre entièrement dans son conteneur parent
-          }} >
-            <CardContent sx={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-
-              padding: 2,
-            }}>
-              {formData.statut == undefined ? (
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  startIcon={<AddIcon />}
-                  onClick={() => {
-                    // Crée une fonction pour mettre à jour l'état ici.
-                    setFormData((prevState) => ({
-                      ...prevState,
-                      statut: "", // Met la description à vide ou selon ton besoin
-                    }));
-                  }}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    height: 270,
-                    justifyContent: 'center', // Centrer le contenu du bouton
-                    width: "100%",  // Faire en sorte que le bouton prenne toute la largeur disponible
-                  }}
-                >
-                  <Typography variant="button" sx={{ fontWeight: 'bold' }}>
-                    Ajouter statut
+                  <Typography variant="h5" fontWeight="medium" color="white">
+                    {formData.title || "Sans titre"}
                   </Typography>
-                </Button>
+                )}
+              </CardContent>
+              <CardActions sx={{ justifyContent: "center" }}>
+                {modif.title ? (
+                  <Stack direction="row" spacing={2}>
+                    <Button sx={buttonStyle} color="success" variant="contained" onClick={() => handleSaveField("title")}>
+                      Enregistrer
+                    </Button>
+                    <Button sx={buttonStyle} color="error" variant="contained" onClick={() => handleUndoField("title")}>
+                      Annuler
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Button sx={buttonStyle} variant="outlined" onClick={() => setModif((prev) => ({ ...prev, title: true }))}>
+                    Modifier
+                  </Button>
+                )}
+              </CardActions>
+            </Card>
+          </Grow>
+        </Grid>
 
+        {/* DESCRIPTION */}
+        <Grid xs={12} md={6}>
+          <Grow in={cardsVisibility[1]}>
+            <Card sx={cardStyle}>
+              <CardContent>
+                {modif.description ? (
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    label="Description"
+                    value={activeFields.description ?? formData.description}
+                    onChange={(e) =>
+                      setActiveFields((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                    InputProps={{ style: { color: "white" } }}
+                    InputLabelProps={{ style: { color: "lightgray" } }}
+                  />
+                ) : (
+                  <Typography color="white">{formData.description || "Aucune description"}</Typography>
+                )}
+              </CardContent>
+              <CardActions sx={{ justifyContent: "center" }}>
+                {modif.description ? (
+                  <Stack direction="row" spacing={2}>
+                    <Button sx={buttonStyle} color="success" variant="contained" onClick={() => handleSaveField("description")}>
+                      Enregistrer
+                    </Button>
+                    <Button sx={buttonStyle} color="error" variant="contained" onClick={() => handleUndoField("description")}>
+                      Annuler
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Button sx={buttonStyle} variant="outlined" onClick={() => setModif((prev) => ({ ...prev, description: true }))}>
+                    Modifier
+                  </Button>
+                )}
+              </CardActions>
+            </Card>
+          </Grow>
+        </Grid>
 
-              ) : (<>
+        {/* SCRIPT */}
+        <Grid xs={12} md={6}>
+          <Grow in={cardsVisibility[2]}>
+            <Card sx={cardStyle}>
+              <CardContent>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Script"
+                  value={formData.script || ""}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, script: e.target.value }))}
+                  InputProps={{ style: { color: "white" } }}
+                  InputLabelProps={{ style: { color: "lightgray" } }}
+                />
+              </CardContent>
+            </Card>
+          </Grow>
+        </Grid>
+
+        {/* STATUT */}
+        <Grid xs={12} md={6}>
+          <Grow in={cardsVisibility[3]}>
+            <Card sx={cardStyle}>
+              <CardContent>
                 <FormControl>
-                  <FormLabel sx={{ fontWeight: "bold", mb: 2 }}>STATUT</FormLabel>
+                  <FormLabel sx={{ color: "white" }}>Statut</FormLabel>
                   <RadioGroup
-                    value={modifstatut ? activestatut : formData.statut} // Utilis  e activestatut seulement en mode édition
-                    onChange={(e) => setActivestatut(e.target.value)} // Mettre à jour activestatut
+                    value={modif.status ? activeFields.status ?? formData.status : formData.status}
+                    onChange={(e) =>
+                      setActiveFields((prev) => ({ ...prev, status: e.target.value }))
+                    }
                   >
-                    <FormControlLabel disabled={!modifstatut} value="En attente" control={<Radio />} label={
-                      <Typography sx={{ color: formData.statut === "En attente" ? "warning.main" : "inherit" }}>
-                        En attente
-                      </Typography>
-                    } />
-                    <Divider />
-                    <FormControlLabel disabled={!modifstatut} value="En cours" control={<Radio />} label={
-                      <Typography sx={{ color: formData.statut === "En cours" ? "primary.main" : "inherit" }}>
-                        En cours
-                      </Typography>
-                    } />
-                    <Divider />
-                    <FormControlLabel disabled={!modifstatut} value="Terminé" control={<Radio />} label={
-                      <Typography sx={{ color: formData.statut === "Terminé" ? "success.main" : "inherit" }}>
-                        Terminé
-                      </Typography>
-                    } />
+                    <FormControlLabel value="open" control={<Radio sx={{ color: "white" }} />} label="Ouvert" disabled={!modif.status} />
+                    <FormControlLabel value="in_progress" control={<Radio sx={{ color: "white" }} />} label="En cours" disabled={!modif.status} />
+                    <FormControlLabel value="done" control={<Radio sx={{ color: "white" }} />} label="Terminé" disabled={!modif.status} />
                   </RadioGroup>
                 </FormControl>
-
-                {!modifstatut ? (
-                  <>
-                    <Button variant="contained" color="secondary" size="small"
-                      onClick={() => {
-                        setModifstatut(true);
-                        setActivestatut(formData.statut); // Garde la valeur actuelle
-                      }}
-                      sx={{ width: '100%', mt: 1 }} // Prend toute la largeur
-                    >
-                      Modifier
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      variant="text"
-                      onClick={() => {
-                        setFormData((prevState) => ({
-                          ...prevState,
-                          statut: undefined,
-                        }));
-                      }}
-                      sx={{ width: '100%', mt: 1 }} // Prend toute la largeur
-                    >
-                      Supprimer
-                    </Button>
-                  </>
-
-
-                ) : (
-                  <>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      size="small"
-                      onClick={() => {
-                        setModifstatut(false);
-                        setFormData((prevState) => ({
-                          ...prevState,
-                          statut: activestatut, // Enregistre la modification
-                        }));
-                      }}
-                      disabled={!activestatut} // Désactive si aucune sélection
-                      sx={{ mt: 1, width: '100%' }} // Prend toute la largeur
-                    >
+              </CardContent>
+              <CardActions sx={{ justifyContent: "center" }}>
+                {modif.status ? (
+                  <Stack direction="row" spacing={2}>
+                    <Button sx={buttonStyle} color="success" variant="contained" onClick={() => handleSaveField("status")}>
                       Enregistrer
                     </Button>
-                    <Button
-                      color="error"
-                      size="small"
-                      onClick={() => {
-                        setModifstatut(false);
-                        setActivestatut(formData.statut); // Remet l'ancienne valeur
-                      }}
-                      sx={{ mt: 1, width: '100%' }} // Prend toute la largeur
-                    >
+                    <Button sx={buttonStyle} color="error" variant="contained" onClick={() => handleUndoField("status")}>
                       Annuler
                     </Button>
-                  </>
+                  </Stack>
+                ) : (
+                  <Button sx={buttonStyle} variant="outlined" onClick={() => setModif((prev) => ({ ...prev, status: true }))}>
+                    Modifier
+                  </Button>
                 )}
-              </>)}
-            </CardContent>
-          </Card>
-        </Grow>
+              </CardActions>
+            </Card>
+          </Grow>
+        </Grid>
 
-
-        <Grow in={cardsVisibility[4]}
-          style={{ transformOrigin: 'center' }}
-          {...(load ? { timeout: 1000 } : {})}>
-          <Card elevation={2} sx={{ borderRadius: 2 }} className="card4">
-            <CardContent>
-              <TextField
-                fullWidth
-                label="Date"
-                type="date"
-                variant="outlined"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              />
-            </CardContent>
-          </Card>
-        </Grow>
-
-        <Grow in={cardsVisibility[5]}
-          style={{ transformOrigin: 'center' }}
-          {...(load ? { timeout: 1000 } : {})}>
-          <Card className="details" sx={{ height: 300 }}>
-            <CardContent >
-              <Stack>
-                {formData.details.frequence !== undefined && formData.details.rushs !== undefined && formData.details.video !== undefined ? (
-                  <Stack display={"flex"} direction="column" spacing={2} alignItems={"center"} sx={{ width: "100%" }}>
-                    <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
-                      <Stack direction="column" spacing={1} sx={{ width: "50%" }}>
-                        <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
+        {/* AUTRES CHAMPS */}
+        {/* DÉTAILS */}
+  
+        <Grid xs={12} md={12}>
+          <Grow in={cardsVisibility[5]}>
+            <Card sx={cardStyle}>
+              <CardContent>
+                {formData.details?.frequence !== undefined &&
+                  formData.details?.rushs !== undefined &&
+                  formData.details?.video !== undefined ? (
+                  <Stack spacing={2} alignItems="center" width="100%">
+                    <Stack direction="row" spacing={2} width="100%">
+                      {/* Rushs et Vidéo */}
+                      <Stack direction="column" spacing={2} width="50%">
+                        <Typography variant="h6" color="white">
                           Durée rushs estimée
                         </Typography>
-                        <BtnDetails modifDetails={modifDetails} activeDetailsSlide1={activeDetailsSlide1} setActiveDetailsSlide1={setActiveDetailsSlide1} formData={formData} setFormData={setFormData} />
-                        <Divider />
-                        <Typography variant="h6" color="textPrimary" sx={{ textAlign: "left" }}>
+                        <BtnDetails
+                          modifDetails={modif.details}
+                          activeDetailsSlide1={activeDetailsSlide1}
+                          setActiveDetailsSlide1={setActiveDetailsSlide1}
+                          formData={formData}
+                          setFormData={setFormData}
+                        />
+
+                        <Typography variant="h6" color="white">
                           Durée vidéo estimée
                         </Typography>
-                        <BtnDetails modifDetails={modifDetails} activeDetailsSlide1={activeDetailsSlide1} setActiveDetailsSlide1={setActiveDetailsSlide1} formData={formData} setFormData={setFormData} />
+                        <BtnDetails
+                          modifDetails={modif.details}
+                          activeDetailsSlide1={activeDetailsSlide2}
+                          setActiveDetailsSlide1={setActiveDetailsSlide2}
+                          formData={formData}
+                          setFormData={setFormData}
+                        />
                       </Stack>
-                      <Divider orientation="vertical" flexItem />
-                      <Box sx={{ width: "50%", display: "flex" }}>
 
-
-
-                        <Stack direction="column" spacing={1} sx={{ width: "100%" }}>
-                          <BtnFrequences setModifDetails={setModifDetails} modifDetails={modifDetails} activeDetailsFreq={activeDetailsFreq} setActiveDetailsFreq={setActiveDetailsFreq} formData={formData} setFormData={setFormData} detSaved={detSaved} detUndone={detUndone} setDetSaved={setDetSaved} setDetUndone={setDetUndone} />
-
-
-                        </Stack>
-
-                      </Box>
+                      {/* Fréquence */}
+                      <Stack direction="column" spacing={2} width="50%">
+                        <Typography variant="h6" color="white">
+                          Fréquence
+                        </Typography>
+                        <BtnFrequences
+                          modifDetails={modif.details}
+                          setModifDetails={setModifDetails}
+                          activeDetailsFreq={activeDetailsFreq}
+                          setActiveDetailsFreq={setActiveDetailsFreq}
+                          formData={formData}
+                          setFormData={setFormData}
+                          detSaved={detSaved}
+                          setDetSaved={setDetSaved}
+                          detUndone={detUndone}
+                          setDetUndone={setDetUndone}
+                        />
+                      </Stack>
                     </Stack>
-                    <Stack display={"flex"} direction="row" spacing={2} sx={{ width: "30%" }}>
 
-                      {!modifDetails ? (
+                    {/* Boutons Edit / Save / Undo */}
+                    <Stack direction="row" spacing={2} width="30%">
+                      {!modif.details ? (
                         <>
-                          <EditButton onClick={() => handleEdit(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2)} />
-
-                          <DeleteIconButton onClick={() => {
-                            setFormData((prevState) => ({
-                              ...prevState,
-                              details: {
-                                rushs: undefined,
-                                video: undefined,
-                                frequence: undefined
-                              }
-                            }))
-                          }}
-
-                          />
-                        </>) : (<>
-
-                          <SaveButton onClick={() => { handleSave(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2); }} />
-                          <UndoButton onClick={() => { handleUndo(setModifDetails, setActiveDetailsFreq, setActiveDetailsSlide1, setActiveDetailsSlide2) }} />
-
-                        </>)}
-
+                          <Button
+                            variant="outlined"
+                            sx={buttonStyle}
+                            onClick={() => setModif((prev) => ({ ...prev, details: true }))}
+                          >
+                            Modifier
+                          </Button>
+                          <Button
+                            variant="contained"
+                            color="error"
+                            sx={buttonStyle}
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                details: { rushs: undefined, video: undefined, frequence: undefined },
+                              }))
+                            }
+                          >
+                            Supprimer
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="contained"
+                            color="success"
+                            sx={buttonStyle}
+                            onClick={() => {
+                              setModif((prev) => ({ ...prev, details: false }));
+                              setActiveDetailsSlide1(null);
+                              setActiveDetailsSlide2(null);
+                              setActiveDetailsFreq(null);
+                            }}
+                          >
+                            Enregistrer
+                          </Button>
+                          <Button
+                            variant="contained"
+                            color="error"
+                            sx={buttonStyle}
+                            onClick={() => {
+                              setModif((prev) => ({ ...prev, details: false }));
+                              // Annuler les modifications
+                              setActiveDetailsSlide1(null);
+                              setActiveDetailsSlide2(null);
+                              setActiveDetailsFreq(formData.details.frequence);
+                            }}
+                          >
+                            Annuler
+                          </Button>
+                        </>
+                      )}
                     </Stack>
                   </Stack>
                 ) : (
-                  <AddButton
+                  <Button
+                    variant="contained"
+                    sx={buttonStyle}
                     onClick={() =>
-                      setFormData((prevState) => ({
-                        ...prevState,
-                        details: {
-                          ...prevState.details,  // Conserve les autres valeurs de details
-                          rushs: "",
-                          video: "",
-                          frequence: ""
-                        }
+                      setFormData((prev) => ({
+                        ...prev,
+                        details: { rushs: "", video: "", frequence: "" },
                       }))
                     }
-                    text={"Ajouter des détails"}
-                  />
+                  >
+                    Ajouter des détails
+                  </Button>
                 )}
-              </Stack>
+              </CardContent>
+            </Card>
+          </Grow>
+        </Grid>
 
 
 
-            </CardContent>
-          </Card>
-        </Grow>
-
-
-        <Card elevation={2} sx={{ borderRadius: 2 }} className="card5">
-          <CardContent>
-            <TextField
-              fullWidth
-              label="Statut"
-              variant="outlined"
-              value={formData.statut}
-              onChange={(e) => setFormData({ ...formData, statut: e.target.value })}
-            />
-          </CardContent>
-        </Card>
-
-        <Card elevation={2} sx={{ borderRadius: 2 }} className="card6">
-          <CardContent>
-            <TextField
-              fullWidth
-              label="Tags (séparés par des virgules)"
-              variant="outlined"
-              value={formData.tags}
-              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-            />
-          </CardContent>
-        </Card>
-
-
-
-        <Card elevation={2} sx={{ borderRadius: 2 }} className="card5">
-          <CardContent>
-            <TextField
-              fullWidth
-              label="guez"
-              variant="outlined"
-              value={formData.statut}
-              onChange={(e) => setFormData({ ...formData, statut: e.target.value })}
-            />
-          </CardContent>
-        </Card>
-
-        <Card elevation={2} sx={{ borderRadius: 2 }} className="card6">
-          <CardContent>
-            <TextField
-              fullWidth
-              label="Tags (séparés par des virgules)"
-              variant="outlined"
-              value={formData.tags}
-              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-            />
-
-
-          </CardContent>
-        </Card>
-
-
-      </div >
-
-    </>
+        {/* CRÉATEUR */}
+        <Grid xs={12}>
+          <Grow in={cardsVisibility[8]}>
+            <Card sx={cardStyle}>
+              <CardContent>
+                <Typography variant="h6" color="white">
+                  Créateur : <strong>{video.creator_name}</strong>
+                </Typography>
+                <Typography variant="body2" color="gray">
+                  Créé le : {new Date(video.created_at).toLocaleString()}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grow>
+        </Grid>
+      </Grid>
+    </Box>
   );
 }
 

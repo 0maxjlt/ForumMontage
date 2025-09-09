@@ -1,146 +1,217 @@
-const express = require("express");
-const cors = require("cors");
-const { video } = require("framer-motion/client");
+
+import express from "express";
+import cors from "cors";
+import sqlite3 from "sqlite3";
+import { open } from "sqlite";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { video } from "framer-motion/client"; // si tu en as vraiment besoin
 
 const app = express();
 const PORT = 3001;
 
-const users = [
-  { 
-    email: "max@example.com", 
-    password: "test", 
-    status: "admin", 
-    videos: [
-      { 
-        id: "vid001",
-        username: "maxlezinzin",
-        title: "Test de la dernière caméra Sony A7",
-        description: "Montage d'une vidéo de review tech avec b-roll et voice-over.",
-        script: "Intro → Unboxing → Test terrain → Conclusion",
-        date: "2025-05-01",
-        status: "En cours",
-        tags: ["Tech", "B-roll", "Review"],
-        estimatedVideoDuration: "00:10:00",
-        estimatedRushesDuration: "00:30:00",
-        price: [100, 140]
-      }, 
-      { 
-        id: "vid002",
-        username: "maxlezinzin",
-        title: "Compilation de fails Minecraft",
-        description: "Montage dynamique et humoristique avec sound design cartoon.",
-        script: "Best-of extrait de streams",
-        date: "2025-05-03",
-        status: "À faire",
-        tags: ["Gaming", "Humour", "Best-of"],
-        estimatedVideoDuration: "00:12:00",
-        estimatedRushesDuration: "00:50:00",
-        price: [80, 100]
-      },
-      { 
-        id: "vid003",
-        username: "maxlezinzin",
-        title: "Intro animée pour chaîne YouTube",
-        description: "Création d'une intro motion design de 5 à 10 secondes.",
-        script: "Logo + animation + son",
-        date: "2025-04-25",
-        status: "Terminé",
-        tags: ["Motion Design", "Intro", "Animation"],
-        estimatedVideoDuration: "00:00:10",
-        estimatedRushesDuration: "00:00:30",
-        price: [40, 60]
-      },
-      { 
-        id: "vid004",
-        username: "maxlezinzin",
-        title: "Présentation de l’application mobile ZenApp et plein d'autres trucs cools",
-        description: "Vidéo explicative avec sous-titres et animations UI.",
-        script: "Fonctionnalités → Avantages → Call-to-action",
-        date: "2025-05-05",
-        status: "En cours",
-        tags: ["App", "UI", "Explainer"],
-        estimatedVideoDuration: "00:03:00",
-        estimatedRushesDuration: "00:15:00",
-        price: [90, 120]
-      },
-      { 
-        id: "vid005",
-        username: "maxlezinzin",
-        title: "Vlog - Une journée à Tokyo",
-        description: "Montage immersif avec musique et sound design.",
-        script: "Matin → Déjeuner → Shopping → Soirée",
-        date: "2025-05-06",
-        status: "Prêt à publier",
-        tags: ["Vlog", "Voyage", "Musique"],
-        estimatedVideoDuration: "00:08:00",
-        estimatedRushesDuration: "00:40:00",
-        price: [100, 130]
-      }
-    ]
-  },
-  { 
-    email: "lisa@youtubemail.com", 
-    password: "hashed_password2", 
-    status: "user", 
-    videos: [
-      { 
-        id: "vid006",
-        username: "lisavlog",
-        title: "Recette rapide : Pancakes à la banane",
-        description: "Montage d’une courte vidéo food en format vertical.",
-        script: "Ingrédients → Préparation → Dégustation",
-        date: "2025-04-29",
-        status: "À valider",
-        tags: ["Cuisine", "Shorts", "Vertical"],
-        estimatedVideoDuration: "00:01:00",
-        estimatedRushesDuration: "00:10:00",
-        price: [30, 50]
-      }
-    ]
-  },
-  {
-    email: "hugo@studio.com", 
-    password: "hashed_password3", 
-    status: "adminboss", 
-    videos: [
-      { 
-        id: "vid007",
-        username: "hugoreact",
-        title: "Formation React pour débutants",
-        description: "Montage d'une série de tutoriels pédagogiques en plusieurs parties.",
-        script: "Intro → JSX → Props → State → Conclusion",
-        date: "2025-05-02",
-        status: "Montage terminé",
-        tags: ["Code", "React", "Formation"],
-        estimatedVideoDuration: "00:20:00",
-        estimatedRushesDuration: "01:00:00",
-        price: [150, 200]
-      }
-    ]
-  }
-];
-
-  
-
-// Middleware pour gérer JSON et CORS
-app.use(express.json());
 app.use(cors());
+app.use(express.json()); // pour parser le JSON du body
+
+
+
+
+// Connexion à SQLite
+const dbPromise = open({
+  filename: "./forum.db",
+  driver: sqlite3.Database
+});
+
+// Création des tables si elles n’existent pas
+async function initDb() {
+  const db = await dbPromise;
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      email TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS video_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      script TEXT,
+      date DATE,
+      status TEXT CHECK(status IN ('open','in_progress','done')) DEFAULT 'open',
+      tags TEXT,
+      estimated_video_duration TEXT,
+      estimated_rushes_duration TEXT,
+      price_min INTEGER,
+      price_max INTEGER,
+      frequence TEXT,
+      creator_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (creator_id) REFERENCES users(id)
+    );
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS applications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      request_id INTEGER NOT NULL,
+      editor_id INTEGER NOT NULL,
+      message TEXT,
+      status TEXT CHECK(status IN ('pending','accepted','rejected')) DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (request_id) REFERENCES video_requests(id),
+      FOREIGN KEY (editor_id) REFERENCES users(id)
+    );
+  `);
+}
+initDb();
+
+// ------------------- ROUTES -------------------
+
+
+
+const SECRET = "unSuperSecretUltraSolide"; // à mettre dans ton .env plus tard
 
 // Route pour gérer la connexion
-app.post("/login", (req, res) => {
-  
-    console.log("Données reçues :", req.body.email, req.body.password);
+app.post("/api/login", async (req, res) => {
+  const db = await dbPromise;
+  const { email, password } = req.body;
 
-    // Vérification des identifiants
-    const user = users.find(u => u.email === req.body.email && u.password === req.body.password);
-    console.log("Utilisateur trouvé :", user);
+  try {
 
-    if (user) {
-        res.json({ success: true, data : user });
-    } else {
-        res.json({ success: false, message : "Email ou mot de passe incorrect" });
+    console.log("Requête reçue sur /api/login :", req.body);
+
+
+    // Chercher l’utilisateur en BDD
+    const user = await db.get("SELECT * FROM users WHERE email = ?", [email]);
+
+    if (!user) {
+      return res.status(401).json({ error: "Email ou mot de passe incorrect" });
     }
+
+    // Vérifier le mot de passe avec bcrypt
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ error: "Email ou mot de passe incorrect" });
+    }
+
+    // Générer un token JWT
+    const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: "2h" });
+
+    // Réponse au frontend
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+
+      }
+    });
+  } catch (err) {
+    console.error("Erreur login:", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
 });
+
+
+
+app.post("/api/register", async (req, res) => {
+  const db = await dbPromise;
+  const { username, email, password} = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  try {
+
+    console.log("Requête reçue sur /api/register :", req.body);
+
+    const result = await db.run(
+      "INSERT INTO users (username, email, password) VALUES (?,?,?)",
+      [username, email, hashedPassword]
+    );
+    res.json({ id: result.lastID, username, email});
+  } catch (err) {
+    res.status(400).json({ error: "Utilisateur déjà existant" });
+  }
+});
+
+
+// ➡️ Créer un souhait de vidéo
+app.post("/api/video_requests", async (req, res) => {
+  const db = await dbPromise;
+  const { title, description, creator_id } = req.body;
+
+  const result = await db.run(
+    "INSERT INTO video_requests (title, description, creator_id) VALUES (?,?,?)",
+    [title, description, creator_id]
+  );
+  res.json({ id: result.lastID, title, description, creator_id });
+});
+
+
+// ➡️ Liste des souhaits de vidéo
+app.get("/api/video_requests", async (req, res) => {
+  console.log("Requête reçue sur /api/video_requests");
+  const db = await dbPromise;
+  const requests = await db.all(
+    "SELECT vr.*, u.username AS creator_name FROM video_requests vr JOIN users u ON vr.creator_id = u.id"
+  );
+  res.json(requests);
+});
+
+// ➡️ Détail d’un souhait de vidéo
+app.get("/api/video_requests/:uid/:vid", async (req, res) => {
+  console.log("Requête reçue sur /api/video_requests/:uid/:vid :", req.params);
+  const db = await dbPromise;
+  const userId = req.params.uid; // l'id du user passé en query ou via token
+  const videoId = req.params.vid; // l'id de la vidéo passée en paramètre
+
+  const request = await db.get(
+    "SELECT vr.*, u.username AS creator_name FROM video_requests vr JOIN users u ON vr.creator_id = u.id WHERE vr.id = ? AND vr.creator_id = ?",
+    [videoId, userId]
+  );
+
+  if (!request) {
+    return res.status(404).json({ error: "Vidéo introuvable ou non autorisée" });
+  }
+
+  res.json(request);
+  console.log(request);
+});
+
+
+
+
+// ➡️ Un monteur candidate à un souhait
+app.post("/api/applications", async (req, res) => {
+  const db = await dbPromise;
+  const { request_id, editor_id, message } = req.body;
+
+  const result = await db.run(
+    "INSERT INTO applications (request_id, editor_id, message) VALUES (?,?,?)",
+    [request_id, editor_id, message]
+  );
+  res.json({ id: result.lastID, request_id, editor_id, message });
+});
+
+// ➡️ Voir les candidatures d’un souhait
+app.get("/api/applications/:requestId", async (req, res) => {
+  const db = await dbPromise;
+  const apps = await db.all(
+    "SELECT a.*, u.username AS editor_name FROM applications a JOIN users u ON a.editor_id = u.id WHERE a.request_id = ?",
+    [req.params.requestId]
+  );
+  res.json(apps);
+});
+
+
+
 
 app.post("/forum", (req, res) => {
     console.log("Connecté à la route Forum, envoie des données");

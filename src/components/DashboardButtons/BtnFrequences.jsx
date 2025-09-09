@@ -67,15 +67,7 @@ export default function BtnFrequences({ setModifDetails, modifDetails, activeDet
     }
   };
 
-  React.useEffect(() => {
-    if (detailsSaved) {
-      handleSubmit();
-    }
-    if (detailsUndone) {
-      handleClose();
-    }
-  }
-  , [detailsSaved, detailsUndone])
+
     
 
   return (
