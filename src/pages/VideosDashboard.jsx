@@ -8,7 +8,6 @@ import {
   TextField,
   Button,
   Stack,
-  Grid,
   FormControl,
   FormLabel,
   RadioGroup,
@@ -16,10 +15,13 @@ import {
   Radio,
   Grow,
   Box,
+  Select,
+  MenuItem,
+  CardHeader,
 } from "@mui/material";
 
-import BtnDetails from "../components/DashboardButtons/BtnDetails";
-import BtnFrequences from "../components/DashboardButtons/BtnFrequences";
+import Slider from "@mui/material/Slider";
+import { color } from "framer-motion";
 
 function VideoDashboard() {
   const { id } = useParams();
@@ -30,20 +32,9 @@ function VideoDashboard() {
   const [loading, setLoading] = useState(true);
 
   const [formData, setFormData] = useState({});
-  const [modif, setModif] = useState({ details: false }); // <--- ajouter details
+  const [modif, setModif] = useState(false); // un seul état global
   const [activeFields, setActiveFields] = useState({});
   const [cardsVisibility, setCardsVisibility] = useState(Array(9).fill(false));
-
-  // États pour les détails
-  const [modifDetails, setModifDetails] = useState(false);
-  const [activeDetails, setActiveDetails] = useState({});
-  const [detailsSaved, setDetailsSaved] = useState(false);
-  const [detailsUndone, setDetailsUndone] = useState(false);
-  const [activeDetailsSlide1, setActiveDetailsSlide1] = useState(null);
-  const [activeDetailsSlide2, setActiveDetailsSlide2] = useState(null);
-  const [activeDetailsFreq, setActiveDetailsFreq] = useState(null);
-  const [detSaved, setDetSaved] = useState(false);
-  const [detUndone, setDetUndone] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -74,23 +65,33 @@ function VideoDashboard() {
     });
   }, []);
 
-  const handleSaveField = (field) => {
+  const handleSave = () => {
     setFormData((prev) => ({
       ...prev,
-      [field]: activeFields[field] ?? prev[field],
+      ...activeFields,
+      details: {
+        ...prev.details,
+        ...activeFields.details,
+      },
     }));
-    setModif((prev) => ({ ...prev, [field]: false }));
-    setActiveFields((prev) => ({ ...prev, [field]: null }));
+    setActiveFields({});
+    setModif(false);
   };
 
-  const handleUndoField = (field) => {
-    setModif((prev) => ({ ...prev, [field]: false }));
-    setActiveFields((prev) => ({ ...prev, [field]: null }));
+  const handleUndo = () => {
+    setActiveFields({});
+    setModif(false);
   };
+
+  // valeurs pour les sliders
+  const realValues = [0, 1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 60, 90, "120+"];
+
+  const scale = (index) => realValues[index];
+  const unscale = (realValue) => realValues.indexOf(realValue);
 
   const cardStyle = {
     borderRadius: 4,
-    p: 3,
+    minHeight: 200,
     boxShadow: "0 8px 16px rgba(0,0,0,0.5)",
     backgroundColor: "#1e1e1e",
     transition: "transform 0.2s, box-shadow 0.2s",
@@ -101,8 +102,8 @@ function VideoDashboard() {
   };
 
   const buttonStyle = {
-    textTransform: "none",
-    fontWeight: 600,
+
+
   };
 
   if (loading) return <Typography color="white">Chargement...</Typography>;
@@ -110,17 +111,36 @@ function VideoDashboard() {
 
   return (
     <Box py={6} px={2} bgcolor="#121212" minHeight="100vh">
-      <Typography variant="h3" fontWeight="bold" textAlign="center" color="white" mb={6}>
+      <Typography variant="h4" fontWeight="bold" textAlign="center" color="white" mb={6}>
         Détail de la demande vidéo
       </Typography>
 
-      <Grid container spacing={4} justifyContent="center">
-        {/* TITRE */}
-        <Grid xs={12} md={6}>
+      <Stack display="flex" flexDirection="row" flexWrap="wrap" gap={4} justifyContent="center">
+
+        {/* Titre */}
+        <Stack
+          width={{ xs: "100%", md: "25%" }} // 100% sur petit écran, 25% sur grand
+        >
           <Grow in={cardsVisibility[0]}>
-            <Card sx={cardStyle}>
-              <CardContent>
-                {modif.title ? (
+            <Card
+              sx={{
+                ...cardStyle,
+                height: 200, // fixe la hauteur
+                display: "flex",
+                flexDirection: "column",
+                backgroundColor: "#353831",
+              }}
+            >
+              <CardHeader title="Titre" sx={{ bgcolor: "#2D2D2A" }} />
+              <CardContent
+                sx={{
+                  flexGrow: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  p: 2,
+                }}
+              >
+                {modif ? (
                   <TextField
                     fullWidth
                     label="Titre"
@@ -130,39 +150,58 @@ function VideoDashboard() {
                     }
                     InputProps={{ style: { color: "white" } }}
                     InputLabelProps={{ style: { color: "lightgray" } }}
+                    multiline
+                    sx={{
+                      flexGrow: 1, // le champ remplit toute la card
+                      "& .MuiInputBase-root": {
+                        height: "100%", // la zone de saisie s’étire
+                        alignItems: "flex-start", // texte aligné en haut
+                      },
+                    }}
                   />
                 ) : (
-                  <Typography variant="h5" fontWeight="medium" color="white">
+                  <Typography
+                    color="grey.300"
+                    variant="h5"
+                    sx={{
+                      flexGrow: 1,
+                      display: "flex",
+                      alignItems: "center", // centre verticalement
+                      justifyContent: "center", // centre horizontalement
+                    }}
+                  >
                     {formData.title || "Sans titre"}
                   </Typography>
                 )}
               </CardContent>
-              <CardActions sx={{ justifyContent: "center" }}>
-                {modif.title ? (
-                  <Stack direction="row" spacing={2}>
-                    <Button sx={buttonStyle} color="success" variant="contained" onClick={() => handleSaveField("title")}>
-                      Enregistrer
-                    </Button>
-                    <Button sx={buttonStyle} color="error" variant="contained" onClick={() => handleUndoField("title")}>
-                      Annuler
-                    </Button>
-                  </Stack>
-                ) : (
-                  <Button sx={buttonStyle} variant="outlined" onClick={() => setModif((prev) => ({ ...prev, title: true }))}>
-                    Modifier
-                  </Button>
-                )}
-              </CardActions>
             </Card>
           </Grow>
-        </Grid>
+        </Stack>
 
-        {/* DESCRIPTION */}
-        <Grid xs={12} md={6}>
+        {/* Description */}
+        <Stack
+          width={{ xs: "100%", md: "70%" }} // 100% sur petit écran, 75% sur grand
+        >
           <Grow in={cardsVisibility[1]}>
-            <Card sx={cardStyle}>
-              <CardContent>
-                {modif.description ? (
+            <Card
+              sx={{
+                ...cardStyle,
+                height: 200,
+                display: "flex",
+                flexDirection: "column",
+                backgroundColor: "#2D2D2A",
+              }}
+            >
+              <CardHeader title="Description" sx={{ bgcolor: "#1E1E1E" }} />
+              <CardContent
+                sx={{
+                  flexGrow: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  p: 2,
+                }}
+              >
+                {modif ? (
                   <TextField
                     fullWidth
                     multiline
@@ -170,232 +209,246 @@ function VideoDashboard() {
                     label="Description"
                     value={activeFields.description ?? formData.description}
                     onChange={(e) =>
-                      setActiveFields((prev) => ({ ...prev, description: e.target.value }))
+                      setActiveFields((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
                     }
                     InputProps={{ style: { color: "white" } }}
                     InputLabelProps={{ style: { color: "lightgray" } }}
+                    sx={{
+                      flexGrow: 1,
+                      "& .MuiInputBase-root": {
+                        height: "100%",
+                        alignItems: "flex-start",
+                      },
+                    }}
                   />
                 ) : (
-                  <Typography color="white">{formData.description || "Aucune description"}</Typography>
+                  <Typography
+                    color="white"
+                    sx={{
+                      flexGrow: 1,
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    {formData.description || "Aucune description"}
+                  </Typography>
                 )}
               </CardContent>
-              <CardActions sx={{ justifyContent: "center" }}>
-                {modif.description ? (
-                  <Stack direction="row" spacing={2}>
-                    <Button sx={buttonStyle} color="success" variant="contained" onClick={() => handleSaveField("description")}>
-                      Enregistrer
-                    </Button>
-                    <Button sx={buttonStyle} color="error" variant="contained" onClick={() => handleUndoField("description")}>
-                      Annuler
-                    </Button>
-                  </Stack>
-                ) : (
-                  <Button sx={buttonStyle} variant="outlined" onClick={() => setModif((prev) => ({ ...prev, description: true }))}>
-                    Modifier
-                  </Button>
-                )}
-              </CardActions>
             </Card>
           </Grow>
-        </Grid>
+        </Stack>
 
-        {/* SCRIPT */}
-        <Grid xs={12} md={6}>
-          <Grow in={cardsVisibility[2]}>
-            <Card sx={cardStyle}>
-              <CardContent>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  label="Script"
-                  value={formData.script || ""}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, script: e.target.value }))}
-                  InputProps={{ style: { color: "white" } }}
-                  InputLabelProps={{ style: { color: "lightgray" } }}
-                />
-              </CardContent>
-            </Card>
-          </Grow>
-        </Grid>
 
         {/* STATUT */}
-        <Grid xs={12} md={6}>
+        <Stack xs={12} md={6}>
           <Grow in={cardsVisibility[3]}>
-            <Card sx={cardStyle}>
+            <Card
+              sx={{
+                ...cardStyle,
+                height: 300,
+                display: "flex",
+                flexDirection: "column",
+                backgroundColor: "#38423B",
+
+              }}
+
+            >
+
+            <CardHeader title="Statut" sx={{ bgcolor: "#2D2D2A" }} />
+
               <CardContent>
                 <FormControl>
                   <FormLabel sx={{ color: "white" }}>Statut</FormLabel>
                   <RadioGroup
-                    value={modif.status ? activeFields.status ?? formData.status : formData.status}
+                    value={activeFields.status ?? formData.status}
                     onChange={(e) =>
                       setActiveFields((prev) => ({ ...prev, status: e.target.value }))
                     }
                   >
-                    <FormControlLabel value="open" control={<Radio sx={{ color: "white" }} />} label="Ouvert" disabled={!modif.status} />
-                    <FormControlLabel value="in_progress" control={<Radio sx={{ color: "white" }} />} label="En cours" disabled={!modif.status} />
-                    <FormControlLabel value="done" control={<Radio sx={{ color: "white" }} />} label="Terminé" disabled={!modif.status} />
+                    <FormControlLabel
+                      value="open"
+                      control={<Radio sx={{ color: "white" }} />}
+                      label="Ouvert"
+                      disabled={!modif}
+                    />
+                    <FormControlLabel
+                      value="in_progress"
+                      control={<Radio sx={{ color: "white" }} />}
+                      label="En cours"
+                      disabled={!modif}
+                    />
+                    <FormControlLabel
+                      value="done"
+                      control={<Radio sx={{ color: "white" }} />}
+                      label="Terminé"
+                      disabled={!modif}
+                    />
                   </RadioGroup>
                 </FormControl>
               </CardContent>
-              <CardActions sx={{ justifyContent: "center" }}>
-                {modif.status ? (
-                  <Stack direction="row" spacing={2}>
-                    <Button sx={buttonStyle} color="success" variant="contained" onClick={() => handleSaveField("status")}>
-                      Enregistrer
-                    </Button>
-                    <Button sx={buttonStyle} color="error" variant="contained" onClick={() => handleUndoField("status")}>
-                      Annuler
-                    </Button>
-                  </Stack>
-                ) : (
-                  <Button sx={buttonStyle} variant="outlined" onClick={() => setModif((prev) => ({ ...prev, status: true }))}>
-                    Modifier
-                  </Button>
-                )}
-              </CardActions>
             </Card>
           </Grow>
-        </Grid>
+        </Stack>
 
-        {/* AUTRES CHAMPS */}
         {/* DÉTAILS */}
-  
-        <Grid xs={12} md={12}>
+        <Stack xs={12} md={12}>
           <Grow in={cardsVisibility[5]}>
-            <Card sx={cardStyle}>
+            <Card sx={{
+              ...cardStyle,
+              height: 200,
+              display: "flex",
+              flexDirection: "column",
+              backgroundColor: "#3F5E5A",
+
+            }}>
               <CardContent>
-                {formData.details?.frequence !== undefined &&
-                  formData.details?.rushs !== undefined &&
-                  formData.details?.video !== undefined ? (
-                  <Stack spacing={2} alignItems="center" width="100%">
-                    <Stack direction="row" spacing={2} width="100%">
-                      {/* Rushs et Vidéo */}
-                      <Stack direction="column" spacing={2} width="50%">
-                        <Typography variant="h6" color="white">
-                          Durée rushs estimée
-                        </Typography>
-                        <BtnDetails
-                          modifDetails={modif.details}
-                          activeDetailsSlide1={activeDetailsSlide1}
-                          setActiveDetailsSlide1={setActiveDetailsSlide1}
-                          formData={formData}
-                          setFormData={setFormData}
-                        />
-
-                        <Typography variant="h6" color="white">
-                          Durée vidéo estimée
-                        </Typography>
-                        <BtnDetails
-                          modifDetails={modif.details}
-                          activeDetailsSlide1={activeDetailsSlide2}
-                          setActiveDetailsSlide1={setActiveDetailsSlide2}
-                          formData={formData}
-                          setFormData={setFormData}
-                        />
-                      </Stack>
-
-                      {/* Fréquence */}
-                      <Stack direction="column" spacing={2} width="50%">
-                        <Typography variant="h6" color="white">
-                          Fréquence
-                        </Typography>
-                        <BtnFrequences
-                          modifDetails={modif.details}
-                          setModifDetails={setModifDetails}
-                          activeDetailsFreq={activeDetailsFreq}
-                          setActiveDetailsFreq={setActiveDetailsFreq}
-                          formData={formData}
-                          setFormData={setFormData}
-                          detSaved={detSaved}
-                          setDetSaved={setDetSaved}
-                          detUndone={detUndone}
-                          setDetUndone={setDetUndone}
-                        />
-                      </Stack>
-                    </Stack>
-
-                    {/* Boutons Edit / Save / Undo */}
-                    <Stack direction="row" spacing={2} width="30%">
-                      {!modif.details ? (
-                        <>
-                          <Button
-                            variant="outlined"
-                            sx={buttonStyle}
-                            onClick={() => setModif((prev) => ({ ...prev, details: true }))}
-                          >
-                            Modifier
-                          </Button>
-                          <Button
-                            variant="contained"
-                            color="error"
-                            sx={buttonStyle}
-                            onClick={() =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                details: { rushs: undefined, video: undefined, frequence: undefined },
-                              }))
-                            }
-                          >
-                            Supprimer
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            variant="contained"
-                            color="success"
-                            sx={buttonStyle}
-                            onClick={() => {
-                              setModif((prev) => ({ ...prev, details: false }));
-                              setActiveDetailsSlide1(null);
-                              setActiveDetailsSlide2(null);
-                              setActiveDetailsFreq(null);
-                            }}
-                          >
-                            Enregistrer
-                          </Button>
-                          <Button
-                            variant="contained"
-                            color="error"
-                            sx={buttonStyle}
-                            onClick={() => {
-                              setModif((prev) => ({ ...prev, details: false }));
-                              // Annuler les modifications
-                              setActiveDetailsSlide1(null);
-                              setActiveDetailsSlide2(null);
-                              setActiveDetailsFreq(formData.details.frequence);
-                            }}
-                          >
-                            Annuler
-                          </Button>
-                        </>
-                      )}
-                    </Stack>
+                <Stack spacing={4}>
+                  {/* Durée rushs */}
+                  <Stack spacing={1}>
+                    <Typography color="white">
+                      Durée rushs estimée
+                    </Typography>
+                    <Slider
+                      disabled={!modif}
+                      min={0}
+                      max={realValues.length - 1}
+                      step={1}
+                      value={
+                        activeFields.details?.rushs !== undefined
+                          ? activeFields.details.rushs
+                          : formData.details?.rushs !== undefined
+                            ? unscale(formData.details.rushs)
+                            : 0
+                      }
+                      onChange={(e, newValue) =>
+                        setActiveFields((prev) => ({
+                          ...prev,
+                          details: {
+                            ...prev.details,
+                            rushs: scale(newValue),
+                          },
+                        }))
+                      }
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={(index) => scale(index)}
+                    />
                   </Stack>
-                ) : (
-                  <Button
-                    variant="contained"
-                    sx={buttonStyle}
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        details: { rushs: "", video: "", frequence: "" },
-                      }))
-                    }
-                  >
-                    Ajouter des détails
-                  </Button>
-                )}
+
+                  {/* Durée vidéo */}
+                  <Stack spacing={1}>
+                    <Typography color="white">
+                      Durée vidéo estimée
+                    </Typography>
+                    <Slider
+                      disabled={!modif}
+                      min={0}
+                      max={realValues.length - 1}
+                      step={1}
+                      value={
+                        activeFields.details?.video !== undefined
+                          ? activeFields.details.video
+                          : formData.details?.video !== undefined
+                            ? unscale(formData.details.video)
+                            : 0
+                      }
+                      onChange={(e, newValue) =>
+                        setActiveFields((prev) => ({
+                          ...prev,
+                          details: {
+                            ...prev.details,
+                            video: scale(newValue),
+                          },
+                        }))
+                      }
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={(index) => scale(index)}
+                    />
+                  </Stack>
+
+                  {/* Fréquence */}
+                  {/* <Stack spacing={1}>
+                    <Typography variant="h6" color="white">
+                      Fréquence
+                    </Typography>
+                    <FormControl fullWidth>
+                      <Select
+                        value={
+                          activeFields.details?.frequence ??
+                          formData.details?.frequence ??
+                          ""
+                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === "Personnalisée") {
+                            setActiveFields((prev) => ({
+                              ...prev,
+                              details: {
+                                ...prev.details,
+                                frequence: "",
+                                customFrequence: true,
+                              },
+                            }));
+                          } else {
+                            setActiveFields((prev) => ({
+                              ...prev,
+                              details: {
+                                ...prev.details,
+                                frequence: value,
+                                customFrequence: false,
+                              },
+                            }));
+                          }
+                        }}
+                        disabled={!modif}
+                      >
+                        <MenuItem value="Hebdomadaire">Hebdomadaire</MenuItem>
+                        <MenuItem value="Mensuelle">Mensuelle</MenuItem>
+                        <MenuItem value="Quotidienne">Quotidienne</MenuItem>
+                        <MenuItem value="Une fois">Une fois</MenuItem>
+                        <MenuItem value="Occasionnelle">Occasionnelle</MenuItem>
+                        <MenuItem value="Personnalisée">Personnalisée</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    {(activeFields.details?.customFrequence ||
+                      formData.details?.customFrequence) && (
+                        <TextField
+                          fullWidth
+                          label="Fréquence personnalisée"
+                          value={
+                            activeFields.details?.frequence ??
+                            formData.details?.frequence ??
+                            ""
+                          }
+                          onChange={(e) =>
+                            setActiveFields((prev) => ({
+                              ...prev,
+                              details: {
+                                ...prev.details,
+                                frequence: e.target.value,
+                                customFrequence: true,
+                              },
+                            }))
+                          }
+                          InputProps={{ style: { color: "white" } }}
+                          InputLabelProps={{ style: { color: "lightgray" } }}
+                          disabled={!modif}
+                        />
+                      )}
+                  </Stack>
+                  */}
+                </Stack>
               </CardContent>
             </Card>
           </Grow>
-        </Grid>
-
+        </Stack>
 
 
         {/* CRÉATEUR */}
-        <Grid xs={12}>
+        <Stack xs={12}>
           <Grow in={cardsVisibility[8]}>
             <Card sx={cardStyle}>
               <CardContent>
@@ -408,8 +461,41 @@ function VideoDashboard() {
               </CardContent>
             </Card>
           </Grow>
-        </Grid>
-      </Grid>
+        </Stack>
+      </Stack>
+
+      {/* Boutons globaux */}
+      <Stack direction="row" spacing={2} justifyContent="center" mt={4}>
+        {!modif ? (
+          <Button
+            sx={buttonStyle}
+            color="primary"
+            variant="contained"
+            onClick={() => setModif(true)}
+          >
+            Modifier
+          </Button>
+        ) : (
+          <>
+            <Button
+              sx={buttonStyle}
+              color="success"
+              variant="contained"
+              onClick={handleSave}
+            >
+              Enregistrer
+            </Button>
+            <Button
+              sx={buttonStyle}
+              color="error"
+              variant="contained"
+              onClick={handleUndo}
+            >
+              Annuler
+            </Button>
+          </>
+        )}
+      </Stack>
     </Box>
   );
 }
