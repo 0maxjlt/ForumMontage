@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button, Stack, Typography, Box } from '@mui/material';
 import Popup from "../components/Popup";
+import { useEffect } from "react";
+
 
 function Login() {
   const [isRegister, setIsRegister] = useState(false);
@@ -12,6 +14,14 @@ function Login() {
   const [popupMessage, setPopupMessage] = useState(null); // pour le Popup
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Déconnecter l'utilisateur automatiquement
+    fetch("http://localhost:3001/api/logout", {
+      method: "POST",
+      credentials: "include"
+    });
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,9 +38,11 @@ function Login() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        credentials: "include" // pour envoyer les cookies
       });
 
       const result = await response.json();
+      console.log("Réponse du serveur :", result);
 
       if (isRegister) {
         // --- INSCRIPTION ---
@@ -48,8 +60,6 @@ function Login() {
       } else {
         // --- LOGIN ---
         if (result.success) {
-          localStorage.setItem("token", result.token);
-          localStorage.setItem("user", JSON.stringify(result.user));
           setFieldError(null);
           navigate("/dashboard");
         } else {

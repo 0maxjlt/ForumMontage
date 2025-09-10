@@ -1,17 +1,24 @@
 
 import express from "express";
-import cors from "cors";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { video } from "framer-motion/client"; // si tu en as vraiment besoin
+import cookieParser from "cookie-parser";
+import cors from "cors";
+
 
 const app = express();
 const PORT = 3001;
 
-app.use(cors());
 app.use(express.json()); // pour parser le JSON du body
+app.use(cookieParser());
+
+app.use(cors({
+  origin: "http://localhost:5173", // ton frontend React
+  credentials: true                // autorise l'envoi des cookies
+}));
 
 
 
@@ -75,6 +82,22 @@ initDb();
 
 
 
+function authMiddleware(req, res, next) {
+  const token = req.cookies.token;
+  if (!token) return res.status(401).json({ error: "Non autorisé" });
+
+  try {
+    const decoded = jwt.verify(token, SECRET);
+    req.user = decoded; // On stocke les infos du user dans req.user
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Token invalide ou expiré" });
+  }
+}
+
+
+
+
 const SECRET = "unSuperSecretUltraSolide"; // à mettre dans ton .env plus tard
 
 // Route pour gérer la connexion
@@ -83,13 +106,10 @@ app.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-
     console.log("Requête reçue sur /api/login :", req.body);
-
 
     // Chercher l’utilisateur en BDD
     const user = await db.get("SELECT * FROM users WHERE email = ?", [email]);
-
     if (!user) {
       return res.status(401).json({ error: "Email ou mot de passe incorrect" });
     }
@@ -103,17 +123,25 @@ app.post("/api/login", async (req, res) => {
     // Générer un token JWT
     const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: "2h" });
 
-    // Réponse au frontend
+    // Définir le token dans un cookie sécurisé
+    res.cookie("token", token, {
+      httpOnly: true, // ⚡ Sécurité : inaccessible au JS côté client
+      secure: false,  // ⚠️ mettre true si HTTPS (prod)
+      sameSite: "lax", // protection CSRF
+      maxAge: 2 * 60 * 60 * 1000, // 2h
+      path: "/"
+    });
+
+    // Réponse au frontend (sans token)
     res.json({
       success: true,
-      token,
       user: {
         id: user.id,
         username: user.username,
         email: user.email,
-
       }
     });
+
   } catch (err) {
     console.error("Erreur login:", err);
     res.status(500).json({ error: "Erreur serveur" });
@@ -121,10 +149,22 @@ app.post("/api/login", async (req, res) => {
 });
 
 
+// Déconnexion
+app.post("/api/logout", (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: false,  // true si HTTPS
+    sameSite: "lax",
+    path: "/"
+  });
+  res.json({ success: true });
+});
+
+
 
 app.post("/api/register", async (req, res) => {
   const db = await dbPromise;
-  const { username, email, password} = req.body;
+  const { username, email, password } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
 
   try {
@@ -135,55 +175,94 @@ app.post("/api/register", async (req, res) => {
       "INSERT INTO users (username, email, password) VALUES (?,?,?)",
       [username, email, hashedPassword]
     );
-    res.json({ id: result.lastID, username, email});
+    res.json({ id: result.lastID, username, email });
   } catch (err) {
     res.status(400).json({ error: "Utilisateur déjà existant" });
   }
 });
 
 
-// ➡️ Créer un souhait de vidéo
-app.post("/api/video_requests", async (req, res) => {
-  const db = await dbPromise;
-  const { title, description, creator_id } = req.body;
 
-  const result = await db.run(
-    "INSERT INTO video_requests (title, description, creator_id) VALUES (?,?,?)",
-    [title, description, creator_id]
-  );
-  res.json({ id: result.lastID, title, description, creator_id });
+
+app.post("/api/video_requests", authMiddleware, async (req, res) => {
+  const db = await dbPromise;
+  const { title, description } = req.body; // on ne prend plus creator_id depuis le frontend
+
+  try {
+    const result = await db.run(
+      "INSERT INTO video_requests (title, description, creator_id) VALUES (?,?,?)",
+      [title, description, req.user.id] // ⚡ on prend l'ID du JWT
+
+    );
+    console.log("Requête reçue sur /api/video_requests :", req.body);
+    res.json({
+      id: result.lastID,
+      title,
+      description,
+      creator_id: req.user.id
+    });
+  } catch (err) {
+    console.error("Erreur création vidéo :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
 });
+
 
 
 // ➡️ Liste des souhaits de vidéo
-app.get("/api/video_requests", async (req, res) => {
-  console.log("Requête reçue sur /api/video_requests");
+app.get("/api/video_requests", authMiddleware, async (req, res) => {
+  console.log("Requête reçue sur /api/video_requests par user:", req.user);
+
   const db = await dbPromise;
+
+  // si tu veux toutes les vidéos :
   const requests = await db.all(
     "SELECT vr.*, u.username AS creator_name FROM video_requests vr JOIN users u ON vr.creator_id = u.id"
   );
-  res.json(requests);
+
+  // si tu veux seulement les vidéos créées par l’utilisateur connecté :
+  const userVideos = requests.filter(v => v.creator_id === req.user.id);
+
+  console.log("Vidéos de l'utilisateur :", userVideos);
+  res.json(userVideos);
 });
 
-// ➡️ Détail d’un souhait de vidéo
-app.get("/api/video_requests/:uid/:vid", async (req, res) => {
-  console.log("Requête reçue sur /api/video_requests/:uid/:vid :", req.params);
+
+
+
+// ✅ Route /api/me pour récupérer le profil utilisateur depuis le cookie
+app.get("/api/me", authMiddleware, async (req, res) => {
   const db = await dbPromise;
-  const userId = req.params.uid; // l'id du user passé en query ou via token
-  const videoId = req.params.vid; // l'id de la vidéo passée en paramètre
-
-  const request = await db.get(
-    "SELECT vr.*, u.username AS creator_name FROM video_requests vr JOIN users u ON vr.creator_id = u.id WHERE vr.id = ? AND vr.creator_id = ?",
-    [videoId, userId]
-  );
-
-  if (!request) {
-    return res.status(404).json({ error: "Vidéo introuvable ou non autorisée" });
-  }
-
-  res.json(request);
-  console.log(request);
+  const user = await db.get("SELECT id, username, email FROM users WHERE id = ?", [req.user.id]);
+  res.json(user);
 });
+
+
+
+
+// Récupérer une seule vidéo par ID pour l'utilisateur connecté
+app.get("/api/video_requests/:vid", authMiddleware, async (req, res) => {
+  const db = await dbPromise;
+  const videoId = req.params.vid;
+
+  try {
+    const video = await db.get(
+      `SELECT vr.*, u.username AS creator_name 
+       FROM video_requests vr 
+       JOIN users u ON vr.creator_id = u.id 
+       WHERE vr.id = ? AND vr.creator_id = ?`,
+      [videoId, req.user.id] // ⚡ on prend l'user depuis le token
+    );
+
+    if (!video) return res.status(404).json({ error: "Vidéo introuvable ou non autorisée" });
+
+    res.json(video);
+  } catch (err) {
+    console.error("Erreur récupération vidéo :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 
 
 
@@ -214,23 +293,23 @@ app.get("/api/applications/:requestId", async (req, res) => {
 
 
 app.post("/forum", (req, res) => {
-    console.log("Connecté à la route Forum, envoie des données");
-    let videoList = [];
-    for (i = 0; i < users.length; i++) {
-        users[i].videos.map((video) => {videoList.push(video)});
-    
-    }
-    console.log("Liste des vidéos :", videoList);
-    if (videoList) {
-        res.json({ success: true, data : videoList });
-    } else {
-        res.json({ success: false, message : "Aucune vidéo trouvée" });
-    }
-    
+  console.log("Connecté à la route Forum, envoie des données");
+  let videoList = [];
+  for (i = 0; i < users.length; i++) {
+    users[i].videos.map((video) => { videoList.push(video) });
+
+  }
+  console.log("Liste des vidéos :", videoList);
+  if (videoList) {
+    res.json({ success: true, data: videoList });
+  } else {
+    res.json({ success: false, message: "Aucune vidéo trouvée" });
+  }
+
 });
 
 
 // Démarrer le serveur
 app.listen(PORT, () => {
-    console.log(`Serveur démarré sur http://localhost:${PORT}`);
+  console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
