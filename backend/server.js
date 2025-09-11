@@ -181,31 +181,184 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
+{/*
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      script TEXT,
+      date DATE,
+      status TEXT CHECK(status IN ('open','in_progress','done')) DEFAULT 'open',
+      tags TEXT,
+      estimated_video_duration TEXT,
+      estimated_rushes_duration TEXT,
+      price_min INTEGER,
+      price_max INTEGER,
+      frequence TEXT,
+      creator_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (creator_id) REFERENCES users(id)
+*/}
 
-
-
+// ✅ Création d'une vidéo
+// ✅ Création d'une vidéo
 app.post("/api/video_requests", authMiddleware, async (req, res) => {
   const db = await dbPromise;
-  const { title, description } = req.body; // on ne prend plus creator_id depuis le frontend
+  const {
+    title,
+    description,
+    script,
+    date,
+    status,
+    estimated_video_duration,
+    estimated_rushes_duration,
+    price_min,
+    price_max,
+    frequence,
+    tags // ➕ ajout des tags
+  } = req.body;
 
   try {
     const result = await db.run(
-      "INSERT INTO video_requests (title, description, creator_id) VALUES (?,?,?)",
-      [title, description, req.user.id] // ⚡ on prend l'ID du JWT
-
+      `INSERT INTO video_requests
+       (title, description, script, date, status,
+        estimated_video_duration, estimated_rushes_duration,
+        price_min, price_max, frequence, tags, creator_id)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        title,
+        description,
+        script,
+        date,
+        status,
+        estimated_video_duration,
+        estimated_rushes_duration,
+        price_min,
+        price_max,
+        frequence,
+        tags ? JSON.stringify(tags) : null, // ⚡ on stocke en JSON string
+        req.user.id,
+      ]
     );
-    console.log("Requête reçue sur /api/video_requests :", req.body);
-    res.json({
-      id: result.lastID,
-      title,
-      description,
-      creator_id: req.user.id
-    });
+
+    const created = await db.get(
+      "SELECT * FROM video_requests WHERE id = ?",
+      [result.lastID]
+    );
+
+    // ⚡ On parse les tags pour le retour API
+    if (created.tags) created.tags = JSON.parse(created.tags);
+
+    console.log("Vidéo créée :", created);
+    res.json(created);
   } catch (err) {
     console.error("Erreur création vidéo :", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
+
+// ✅ Modification d'une vidéo
+app.put("/api/video_requests/:id", authMiddleware, async (req, res) => {
+  const db = await dbPromise;
+  const {
+    title,
+    description,
+    script,
+    date,
+    status,
+    estimated_video_duration,
+    estimated_rushes_duration,
+    price_min,
+    price_max,
+    frequence,
+    tags // ➕ ajout des tags
+  } = req.body;
+  const { id } = req.params;
+
+  try {
+    const result = await db.run(
+      `UPDATE video_requests
+       SET title = ?, description = ?, script = ?, date = ?, status = ?,
+           estimated_video_duration = ?, estimated_rushes_duration = ?,
+           price_min = ?, price_max = ?, frequence = ?, tags = ?
+       WHERE id = ? AND creator_id = ?`,
+      [
+        title,
+        description,
+        script,
+        date,
+        status,
+        estimated_video_duration,
+        estimated_rushes_duration,
+        price_min,
+        price_max,
+        frequence,
+        tags ? JSON.stringify(tags) : null,
+        id,
+        req.user.id,
+      ]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "Vidéo non trouvée ou accès refusé" });
+    }
+
+    const updated = await db.get(
+      "SELECT * FROM video_requests WHERE id = ? AND creator_id = ?",
+      [id, req.user.id]
+    );
+
+    if (updated.tags) updated.tags = JSON.parse(updated.tags);
+
+    console.log("Vidéo mise à jour :", updated);
+    res.json(updated);
+  } catch (err) {
+    console.error("Erreur modification vidéo :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+// ➡️ Liste des vidéos (toutes ou par user)
+app.get("/api/video_requests", authMiddleware, async (req, res) => {
+  const db = await dbPromise;
+  const requests = await db.all(
+    "SELECT vr.*, u.username AS creator_name FROM video_requests vr JOIN users u ON vr.creator_id = u.id"
+  );
+
+  const userVideos = requests
+    .filter(v => v.creator_id === req.user.id)
+    .map(v => ({
+      ...v,
+      tags: v.tags ? JSON.parse(v.tags) : [] // ⚡ parse JSON en tableau
+    }));
+
+  res.json(userVideos);
+});
+
+// ➡️ Récupération d'une vidéo par ID
+app.get("/api/video_requests/:vid", authMiddleware, async (req, res) => {
+  const db = await dbPromise;
+  const videoId = req.params.vid;
+
+  try {
+    const video = await db.get(
+      `SELECT vr.*, u.username AS creator_name 
+       FROM video_requests vr 
+       JOIN users u ON vr.creator_id = u.id 
+       WHERE vr.id = ? AND vr.creator_id = ?`,
+      [videoId, req.user.id]
+    );
+
+    if (!video) return res.status(404).json({ error: "Vidéo introuvable ou non autorisée" });
+
+    video.tags = video.tags ? JSON.parse(video.tags) : [];
+
+    res.json(video);
+  } catch (err) {
+    console.error("Erreur récupération vidéo :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 
 
 

@@ -37,7 +37,7 @@ function Dashboard() {
                 const data = await res.json();
 
                 setVideos(data); // toutes les vidéos reçues
-
+                
                 // Définir l'utilisateur connecté à partir de la première vidéo (si elle existe)
                 if (data.length > 0) {
                     setUser({
@@ -179,7 +179,15 @@ function Dashboard() {
                                         credentials: "include", // ⚡ envoie le cookie
                                         body: JSON.stringify({
                                             title: "Nouvelle vidéo",
-                                            description: ""
+                                            description: "",
+                                            script: "",
+                                            date: new Date(),
+                                            status: "open",
+                                            estimated_video_duration: "",
+                                            estimated_rushes_duration: "",
+                                            price_min: null,
+                                            price_max: null,
+                                            frequence: "",
                                         }),
                                     });
 

@@ -1,29 +1,28 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Form, useNavigate, useParams } from "react-router-dom";
 import {
   Card,
   CardContent,
-  CardActions,
   Typography,
   TextField,
   Button,
   Stack,
   FormControl,
-  FormLabel,
   RadioGroup,
   FormControlLabel,
   Radio,
   Grow,
   Box,
-  Select,
-  MenuItem,
   CardHeader,
+  Chip,
 } from "@mui/material";
 import Slider from "@mui/material/Slider";
-import { green } from "@mui/material/colors";
+
+import DeleteIcon from "@mui/icons-material/Delete";
+import { form } from "framer-motion/client";
 
 function VideoDashboard() {
-  const { id } = useParams(); // id de la vidéo
+  const { id } = useParams();
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
@@ -42,14 +41,12 @@ function VideoDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Récupérer le user depuis le cookie
         const meRes = await fetch("http://localhost:3001/api/me", {
           method: "GET",
-          credentials: "include", // ⚡ cookie envoyé
+          credentials: "include",
         });
 
         if (meRes.status === 401) {
-          console.log(meRes);
           navigate("/login");
           return;
         }
@@ -57,7 +54,6 @@ function VideoDashboard() {
         const meData = await meRes.json();
         setUser(meData);
 
-        // Récupérer la vidéo
         const videoRes = await fetch(`http://localhost:3001/api/video_requests/${id}`, {
           method: "GET",
           credentials: "include",
@@ -99,24 +95,53 @@ function VideoDashboard() {
     });
   }, []);
 
-  const handleSave = () => {
-    setFormData((prev) => ({
-      ...prev,
+  // --- Sauvegarde ---
+  const handleSave = async () => {
+    const newData = {
+      ...formData,
       ...activeFields,
-      details: {
-        ...prev.details,
-        ...activeFields.details,
-      },
-    }));
-    setActiveFields({});
-    setModif(false);
+    };
+
+    // 🔄 Conversion tags : string -> tableau
+    if (typeof newData.tags === "string") {
+      newData.tags = newData.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+    }
+
+    console.log("Données envoyées au serveur :", newData);
+
+    try {
+      const res = await fetch(`http://localhost:3001/api/video_requests/${formData.id}`, {
+        method: "PUT", // ⚡ PUT pour modification
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(newData),
+      });
+
+      if (!res.ok) {
+        console.error("Erreur mise à jour vidéo :", await res.json());
+        return;
+      }
+
+      const updatedVideo = await res.json();
+      console.log("Réponse serveur :", updatedVideo);
+
+      setFormData(updatedVideo);
+      setActiveFields({});
+      setModif(false);
+
+      navigate(`/dashboard/${updatedVideo.id}`);
+    } catch (err) {
+      console.error("Erreur mise à jour vidéo :", err);
+    }
   };
 
   const handleUndo = () => {
     setActiveFields({});
     setModif(false);
   };
-
 
   const cardStyle = {};
   const buttonStyle = { minWidth: 120 };
@@ -133,25 +158,11 @@ function VideoDashboard() {
       <Stack display="flex" flexDirection="row" flexWrap="wrap" gap={4} justifyContent="center">
 
         {/* Titre */}
-        <Stack
-          width={{ xs: "100%", md: "25%" }} // 100% sur petit écran, 25% sur grand
-        >
+        <Stack width={{ xs: "100%", md: "25%" }}>
           <Grow in={cardsVisibility[0]}>
-            <Card
-              sx={{
-                ...cardStyle,
-                height: 200, // fixe la hauteur
-                display: "flex",
-                flexDirection: "column",
-                backgroundColor: "#353831",
-              }}
-            >
+            <Card sx={{ ...cardStyle, height: 200, display: "flex", flexDirection: "column", backgroundColor: "#353831" }}>
               <CardHeader title="Titre" sx={{ bgcolor: "#2D2D2A" }} />
-              <CardContent
-                sx={{
-
-                }}
-              >
+              <CardContent>
                 {modif ? (
                   <TextField
                     fullWidth
@@ -164,11 +175,7 @@ function VideoDashboard() {
                     rows={3}
                   />
                 ) : (
-                  <Typography
-                    color="grey.300"
-
-
-                  >
+                  <Typography color="grey.300">
                     {formData.title || "Sans titre"}
                   </Typography>
                 )}
@@ -178,22 +185,11 @@ function VideoDashboard() {
         </Stack>
 
         {/* Description */}
-        <Stack
-          width={{ xs: "100%", md: "70%" }} // 100% sur petit écran, 75% sur grand
-        >
+        <Stack width={{ xs: "100%", md: "70%" }}>
           <Grow in={cardsVisibility[1]}>
-            <Card
-              sx={{
-                ...cardStyle,
-                height: 200,
-                display: "flex",
-                flexDirection: "column",
-                backgroundColor: "#2D2D2A",
-              }}
-            >
+            <Card sx={{ ...cardStyle, height: 200, display: "flex", flexDirection: "column", backgroundColor: "#2D2D2A" }}>
               <CardHeader title="Description" sx={{ bgcolor: "#1E1E1E" }} />
-              <CardContent
-              >
+              <CardContent>
                 {modif ? (
                   <TextField
                     rows={3}
@@ -207,14 +203,9 @@ function VideoDashboard() {
                         description: e.target.value,
                       }))
                     }
-
-
                   />
                 ) : (
-                  <Typography
-                    color="white"
-
-                  >
+                  <Typography color="white">
                     {formData.description || "Aucune description"}
                   </Typography>
                 )}
@@ -223,41 +214,25 @@ function VideoDashboard() {
           </Grow>
         </Stack>
 
-
-        {/* STATUT */}
+        {/* Statut */}
         <Stack xs={12} md={6}>
           <Grow in={cardsVisibility[3]}>
-            <Card
-              sx={{
-                ...cardStyle,
-                height: 250,
-                display: "flex",
-                flexDirection: "column",
-                backgroundColor: "#38423B",
-
-              }}
-
-            >
-
+            <Card sx={{ ...cardStyle, height: 250, display: "flex", flexDirection: "column", backgroundColor: "#38423B" }}>
               <CardHeader title="Statut" sx={{ bgcolor: "#2D2D2A" }} />
-
-              <CardContent >
+              <CardContent>
                 <FormControl>
-
                   <RadioGroup
                     value={activeFields.status ?? formData.status}
                     onChange={(e) =>
                       setActiveFields((prev) => ({ ...prev, status: e.target.value }))
                     }
                     sx={{ pl: 1, pr: 1 }}
-
                   >
                     <FormControlLabel
                       value="open"
                       control={<Radio sx={{ color: "white" }} />}
                       label="Ouvert"
                       disabled={!modif}
-
                     />
                     <FormControlLabel
                       value="in_progress"
@@ -278,36 +253,20 @@ function VideoDashboard() {
           </Grow>
         </Stack>
 
-        {/* DÉTAILS */}
-
-
-        <Stack xs={12} md={12} >
+        {/* Détails (rushs + vidéo) */}
+        <Stack xs={12} md={12}>
           <Grow in={cardsVisibility[5]}>
-            <Card
-              sx={{
-                ...cardStyle,
-                height: 300, // hauteur fixe
-                display: "flex",
-                flexDirection: "column",
-                backgroundColor: "#3F5E5A",
-              }}
-            >
-              <CardHeader
-                title="Détails"
-                sx={{bgcolor: "#2D2D2A", color: "white" }}
-              />
+            <Card sx={{ ...cardStyle, height: 300, display: "flex", flexDirection: "column", backgroundColor: "#3F5E5A" }}>
+              <CardHeader title="Détails" sx={{ bgcolor: "#2D2D2A", color: "white" }} />
               <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column", p: 2 }}>
                 <Stack spacing={3} sx={{ width: "100%" }}>
+
                   {/* Durée rushs */}
-                  <Stack spacing={1} sx={{ width: "100%", pl: 1, pr: 1 }}>
-                    <Typography color="white" >Durée rushs estimée</Typography>
+                  <Stack spacing={1}>
+                    <Typography color="white">Durée rushs estimée</Typography>
                     <Typography color="white" textAlign="center" fontWeight="bold">
-                      {activeFields.details?.rushs !== undefined
-                        ? activeFields.details.rushs
-                        : formData.details?.rushs !== undefined
-                          ? formData.details.rushs
-                          : scale(0)}
-                      {activeFields.details?.rushs !== 1 ? " minutes" : " minute"}
+                      {activeFields.rushs ?? formData.rushs ?? scale(0)}{" "}
+                      {(activeFields.rushs ?? formData.rushs ?? 0) !== 1 ? "minutes" : "minute"}
                     </Typography>
                     <Slider
                       disabled={!modif}
@@ -315,34 +274,26 @@ function VideoDashboard() {
                       max={realValues.length - 1}
                       step={1}
                       value={
-                        activeFields.details?.rushs !== undefined
-                          ? unscale(activeFields.details.rushs)
-                          : formData.details?.rushs !== undefined
-                            ? unscale(formData.details.rushs)
+                        activeFields.rushs !== undefined
+                          ? unscale(activeFields.rushs)
+                          : formData.rushs !== undefined
+                            ? unscale(formData.rushs)
                             : 0
                       }
                       onChange={(e, newValue) =>
-                        setActiveFields((prev) => ({
-                          ...prev,
-                          details: { ...prev.details, rushs: scale(newValue) },
-                        }))
+                        setActiveFields((prev) => ({ ...prev, rushs: scale(newValue) }))
                       }
                       valueLabelDisplay="auto"
                       valueLabelFormat={(index) => scale(index)}
-                 
                     />
                   </Stack>
 
                   {/* Durée vidéo */}
-                  <Stack spacing={1} sx={{ width: "100%" , pl: 1, pr: 1  }}>
+                  <Stack spacing={1}>
                     <Typography color="white">Durée vidéo estimée</Typography>
                     <Typography color="white" textAlign="center" fontWeight="bold">
-                      {activeFields.details?.video !== undefined
-                        ? activeFields.details.video
-                        : formData.details?.video !== undefined
-                          ? formData.details.video
-                          : scale(0)}
-                      {activeFields.details?.video !== 1 ? " minutes" : " minute"}
+                      {activeFields.video ?? formData.video ?? scale(0)}{" "}
+                      {(activeFields.video ?? formData.video ?? 0) !== 1 ? "minutes" : "minute"}
                     </Typography>
                     <Slider
                       disabled={!modif}
@@ -350,71 +301,18 @@ function VideoDashboard() {
                       max={realValues.length - 1}
                       step={1}
                       value={
-                        activeFields.details?.video !== undefined
-                          ? unscale(activeFields.details.video)
-                          : formData.details?.video !== undefined
-                            ? unscale(formData.details.video)
+                        activeFields.video !== undefined
+                          ? unscale(activeFields.video)
+                          : formData.video !== undefined
+                            ? unscale(formData.video)
                             : 0
                       }
                       onChange={(e, newValue) =>
-                        setActiveFields((prev) => ({
-                          ...prev,
-                          details: { ...prev.details, video: scale(newValue) },
-                        }))
+                        setActiveFields((prev) => ({ ...prev, video: scale(newValue) }))
                       }
                       valueLabelDisplay="auto"
                       valueLabelFormat={(index) => scale(index)}
                     />
-                  </Stack>
-
-                  {/* Fréquence */}
-                  <Stack spacing={1} sx={{ width: "100%" }}>
-                    <Typography color="white">Fréquence</Typography>
-                    <FormControl fullWidth>
-                      <Select
-                        value={activeFields.details?.frequence ?? formData.details?.frequence ?? ""}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === "Personnalisée") {
-                            setActiveFields((prev) => ({
-                              ...prev,
-                              details: { ...prev.details, frequence: "", customFrequence: true },
-                            }));
-                          } else {
-                            setActiveFields((prev) => ({
-                              ...prev,
-                              details: { ...prev.details, frequence: value, customFrequence: false },
-                            }));
-                          }
-                        }}
-                        disabled={!modif}
-                      >
-                        <MenuItem value="Hebdomadaire">Hebdomadaire</MenuItem>
-                        <MenuItem value="Mensuelle">Mensuelle</MenuItem>
-                        <MenuItem value="Quotidienne">Quotidienne</MenuItem>
-                        <MenuItem value="Une fois">Une fois</MenuItem>
-                        <MenuItem value="Occasionnelle">Occasionnelle</MenuItem>
-                        <MenuItem value="Personnalisée">Personnalisée</MenuItem>
-                      </Select>
-                    </FormControl>
-
-                    {(activeFields.details?.customFrequence ||
-                      formData.details?.customFrequence) && (
-                        <TextField
-                          fullWidth
-                          label="Fréquence personnalisée"
-                          value={activeFields.details?.frequence ?? formData.details?.frequence ?? ""}
-                          onChange={(e) =>
-                            setActiveFields((prev) => ({
-                              ...prev,
-                              details: { ...prev.details, frequence: e.target.value, customFrequence: true },
-                            }))
-                          }
-                          InputProps={{ style: { color: "white" } }}
-                          InputLabelProps={{ style: { color: "lightgray" } }}
-                          disabled={!modif}
-                        />
-                      )}
                   </Stack>
                 </Stack>
               </CardContent>
@@ -422,9 +320,84 @@ function VideoDashboard() {
           </Grow>
         </Stack>
 
+        {/* --- Prix --- */}
+        <Stack xs={12} md={6}>
+          <Grow in={cardsVisibility[6]}>
+            <Card sx={{ ...cardStyle, height: 250, display: "flex", flexDirection: "column", backgroundColor: "#4B3F72" }}>
+              <CardHeader title="Prix estimé (€)" sx={{ bgcolor: "#2D2D2A", color: "white" }} />
+              <CardContent>
+                <Typography color="white" textAlign="center" fontWeight="bold">
+                  {activeFields.price_min ?? formData.price_min ?? 0} € - {activeFields.price_max ?? formData.price_max ?? 0} €
+                </Typography>
+                <Slider
+                  disabled={!modif}
+                  value={[
+                    activeFields.price_min ?? formData.price_min ?? 0,
+                    activeFields.price_max ?? formData.price_max ?? 1000,
+                  ]}
+                  onChange={(e, newValue) =>
+                    setActiveFields((prev) => ({
+                      ...prev,
+                      price_min: newValue[0],
+                      price_max: newValue[1],
+                    }))
+                  }
+                  valueLabelDisplay="auto"
+                  min={0}
+                  max={1000}
+                  step={10}
+                />
+              </CardContent>
+            </Card>
+          </Grow>
+        </Stack>
 
+        {/* --- Tags --- */}
+        <Stack xs={12} md={6}>
+          <Grow in={cardsVisibility[7]}>
+            <Card sx={{ ...cardStyle, height: 200, display: "flex", flexDirection: "column", backgroundColor: "#72504B" }}>
+              <CardHeader title="Tags" sx={{ bgcolor: "#2D2D2A", color: "white" }} />
+              <CardContent>
+                {modif ? (
+                  <TextField
+                    fullWidth
+                    label="Tags (séparés par des virgules)"
+                    value={
+                      activeFields.tags !== undefined
+                        ? Array.isArray(activeFields.tags)
+                          ? activeFields.tags.join(", ")
+                          : activeFields.tags
+                        : Array.isArray(formData.tags)
+                          ? formData.tags.join(", ")
+                          : formData.tags ?? ""
+                    }
+                    onChange={(e) =>
+                      setActiveFields((prev) => ({ ...prev, tags: e.target.value }))
+                    }
+                    multiline
+                  />
+                ) : (
 
-        {/* CRÉATEUR */}
+                  <>
+                  <Stack display={"flex"} flexDirection={"row"} flexWrap={"wrap"}>
+                    {formData.tags.map((tag, index) => (
+                        
+                          <Chip
+                            key={index}
+                            label={tag}
+                            sx={{ mr: 1, mb: 1, bgcolor: "#2D2D2A", color: "white", boxShadow: 2 }}
+                          />
+                      
+                      ))}
+                  </Stack>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </Grow>
+        </Stack>
+
+        {/* Créateur */}
         <Stack xs={12}>
           <Grow in={cardsVisibility[8]}>
             <Card sx={cardStyle}>
@@ -444,30 +417,15 @@ function VideoDashboard() {
       {/* Boutons globaux */}
       <Stack direction="row" spacing={2} justifyContent="center" mt={4}>
         {!modif ? (
-          <Button
-            sx={buttonStyle}
-            color="primary"
-            variant="contained"
-            onClick={() => setModif(true)}
-          >
+          <Button sx={buttonStyle} color="primary" variant="contained" onClick={() => setModif(true)}>
             Modifier
           </Button>
         ) : (
           <>
-            <Button
-              sx={buttonStyle}
-              color="success"
-              variant="contained"
-              onClick={handleSave}
-            >
+            <Button sx={buttonStyle} color="success" variant="contained" onClick={handleSave}>
               Enregistrer
             </Button>
-            <Button
-              sx={buttonStyle}
-              color="error"
-              variant="contained"
-              onClick={handleUndo}
-            >
+            <Button sx={buttonStyle} color="error" variant="contained" onClick={handleUndo}>
               Annuler
             </Button>
           </>
