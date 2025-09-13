@@ -15,6 +15,7 @@ import {
     CardActions,
     Checkbox,
     FormControlLabel,
+    Stack,
 } from "@mui/material";
 import { CheckBox, DeleteForeverOutlined, Favorite, FavoriteBorder } from "@mui/icons-material";
 import { yellow, red } from "@mui/material/colors";
@@ -97,9 +98,26 @@ function Dashboard() {
         ));
     }
 
+    const handleDelete = async (videoId) => {
+        try {
+            const res = await fetch(`http://localhost:3001/api/video_requests/${videoId}`, {
+                method: "DELETE",
+                credentials: "include",
+            });
+
+            if (res.ok) {
+                setVideos(videos.filter(video => video.id !== videoId));
+            } else {
+                console.error("Erreur lors de la suppression :", res.statusText);
+            }
+        } catch (err) {
+            console.error("Erreur fetch suppression :", err);
+        }
+    };
+
     return (
         <DashboardContext.Provider value={{ user, videos }}>
-            <Container maxWidth="lg" sx={{ py: 4 }}>
+            <Container sx={{}}>
                 <Typography variant="h4" fontWeight="bold" gutterBottom>
                     Tableau de bord
                 </Typography>
@@ -109,9 +127,9 @@ function Dashboard() {
 
                 {videos.length > 0 ? (
                     <>
-                        <Grid container spacing={3} sx={{ mt: 2 }}>
+                        <Grid container sx={{ mt: 2, gap: 2 }} >
                             {videos.map(video => (
-                                <Grid item key={video.id} xs={12} sm={6} md={4} lg={3}>
+                                <Grid item key={video.id} >
                                     <Card
                                         sx={{
                                             display: 'flex',
@@ -167,34 +185,83 @@ function Dashboard() {
 
                                         </CardActionArea>
                                         <CardActions>
-
-                                            <Checkbox
-                                                onChange={() => handleSelect(video.id)}
-                                            />
-
-                                            <Checkbox
-
-                                                icon={<FavoriteBorder />}
-                                                checkedIcon={<Favorite />}
-                                                sx={{ color: yellow[800], '&.Mui-checked': { color: yellow[600] } }}
-                                                checked={console.log(video.liked || false)}
-                                            />
-
-
-
-                                            <IconButton
-                                                aria-label="delete"
-                                            >
-                                                <DeleteIcon
-                                                    color="error"
-                                                    onClick={async (e) => {
-                                                        e.stopPropagation();
-                                                        if (confirm("Êtes-vous sûr de vouloir supprimer cette vidéo ?")) {
-                                                            await handleDelete(video.id);
-                                                        }
-                                                    }}
+                                            <Stack display={"flex"} flexDirection="row" width="100%">
+                                                <Checkbox
+                                                    onChange={() => handleSelect(video.id)}
                                                 />
-                                            </IconButton>
+                                                <Stack direction="row" spacing={1} alignItems="right" ml="auto">
+                                                    <Checkbox
+                                                        icon={<FavoriteBorder />}
+                                                        checkedIcon={<Favorite />}
+                                                        sx={{
+                                                            color: yellow[800],
+                                                            "&.Mui-checked": { color: yellow[600] },
+                                                        }}
+                                                        checked={Boolean(video.favorite)}
+                                                        onChange={async (e) => {
+                                                            e.stopPropagation();
+                                                            const newValue = !video.favorite;
+
+                                                            try {
+                                                                const res = await fetch(
+                                                                    `http://localhost:3001/api/video_requests/${video.id}/favorite`,
+                                                                    {
+                                                                        method: "PUT",
+                                                                        headers: { "Content-Type": "application/json" },
+                                                                        body: JSON.stringify({ favorite: newValue }),
+                                                                        credentials: "include",
+                                                                    }
+                                                                );
+
+                                                                if (res.ok) {
+                                                                    // On met à jour **toutes les vidéos** et on les trie
+                                                                    setVideos(prevVideos => {
+                                                                        // 1️⃣ Mettre à jour la vidéo cliquée
+                                                                        const updatedVideos = prevVideos.map(v =>
+                                                                            v.id === video.id ? { ...v, favorite: !v.favorite } : v
+                                                                        );
+
+                                                                        // 2️⃣ Créer un nouveau tableau avant de trier
+                                                                        const sortedVideos = [...updatedVideos].sort((a, b) => {
+                                                                            // Favoris en premier
+                                                                            if (b.favorite !== a.favorite) return b.favorite - a.favorite;
+
+                                                                            // Puis par date décroissante
+                                                                            return new Date(b.created_at) - new Date(a.created_at);
+                                                                        });
+
+                                                                        // 3️⃣ Retourner ce nouveau tableau -> React re-render
+                                                                        console.log("Vidéos triées :", sortedVideos);
+                                                                        return sortedVideos;
+                                                                    });
+
+
+
+                                                                }
+                                                            } catch (err) {
+                                                                console.error("Erreur mise à jour favori :", err);
+                                                            }
+                                                        }}
+                                                    />
+
+
+
+
+                                                    <IconButton
+                                                        aria-label="delete"
+                                                    >
+                                                        <DeleteIcon
+                                                            color="error"
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                if (confirm("Êtes-vous sûr de vouloir supprimer cette vidéo ?")) {
+                                                                    await handleDelete(video.id);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </IconButton>
+                                                </Stack>
+                                            </Stack>
 
                                         </CardActions>
                                     </Card>
@@ -234,13 +301,14 @@ function Dashboard() {
                                             title: "Nouvelle vidéo",
                                             description: "",
                                             script: "",
-                                            date: new Date().toISOString().slice(0, 19).replace("T", " "),
                                             status: "open",
                                             estimated_video_duration: "",
                                             estimated_rushes_duration: "",
                                             price_min: null,
                                             price_max: null,
                                             frequence: "",
+                                            tags: "",
+                                            favorite: false,
                                         }),
                                     });
 
@@ -266,40 +334,44 @@ function Dashboard() {
                             Créer une vidéo
                         </Button>
 
-                        <Button
-                            variant="outlined"
-                            color="error"
-                            onClick={async () => {
-                                try {
-                                    // Récupérer les vidéos sélectionnées
-                                    const selectedVideos = videos.filter(video => video.selected);
-                                    if (selectedVideos.length === 0) {
-                                        alert("Veuillez sélectionner au moins une vidéo à supprimer.");
-                                        return;
+                        {(videos.filter(video => video.selected).length > 0) ? (
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                onClick={async () => {
+                                    try {
+                                        // Récupérer les vidéos sélectionnées
+                                        const selectedVideos = videos.filter(video => video.selected);
+                                        if (selectedVideos.length === 0) {
+                                            alert("Veuillez sélectionner au moins une vidéo à supprimer.");
+                                            return;
+                                        }
+
+                                        if (!window.confirm(`Êtes-vous sûr de vouloir supprimer ${selectedVideos.length} vidéo(s) ? Cette action est irréversible.`)) {
+                                            return;
+                                        }
+                                        // Supprimer les vidéos sélectionnées
+                                        await Promise.all(selectedVideos.map(video =>
+                                            fetch(`http://localhost:3001/api/video_requests/${video.id}`, {
+                                                method: "DELETE",
+                                                credentials: "include",
+                                            })
+                                        ));
+
+                                        // Mettre à jour la liste des vidéos
+                                        setVideos(videos.filter(video => !video.selected));
+                                        alert("Vidéos supprimées avec succès.");
+                                    } catch (err) {
+                                        console.error("Erreur suppression vidéo :", err);
                                     }
+                                }}
+                            >
+                                Supprimer vidéo
+                            </Button>
+                        )
+                            : null
 
-                                    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer ${selectedVideos.length} vidéo(s) ? Cette action est irréversible.`)) {
-                                        return;
-                                    }
-                                    // Supprimer les vidéos sélectionnées
-                                    await Promise.all(selectedVideos.map(video =>
-                                        fetch(`http://localhost:3001/api/video_requests/${video.id}`, {
-                                            method: "DELETE",
-                                            credentials: "include",
-                                        })
-                                    ));
-
-                                    // Mettre à jour la liste des vidéos
-                                    setVideos(videos.filter(video => !video.selected));
-                                    alert("Vidéos supprimées avec succès.");
-                                } catch (err) {
-                                    console.error("Erreur suppression vidéo :", err);
-                                }
-                            }}
-                        >
-                            Supprimer vidéo
-                        </Button>
-
+                        }
                     </Box>
                 </Box>
 

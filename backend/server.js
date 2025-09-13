@@ -20,12 +20,13 @@ app.use(cors({
 // ------------------- CONFIG BDD MariaDB -------------------
 const pool = mariadb.createPool({
   host: "localhost",
-  user: "root", // à adapter
-  password: "azerty", // à adapter
+  user: "root",
+  password: "azerty",
   database: "forumdb",
   connectionLimit: 5,
-  port: 3306
+  port: 3306,
 });
+
 
 async function query(sql, params = []) {
   let conn;
@@ -56,7 +57,6 @@ async function initDb() {
       title VARCHAR(255) NOT NULL,
       description TEXT NOT NULL,
       script TEXT,
-      date DATE,
       status ENUM('open','in_progress','done') DEFAULT 'open',
       tags TEXT,
       estimated_video_duration VARCHAR(50),
@@ -66,6 +66,7 @@ async function initDb() {
       frequence VARCHAR(50),
       creator_id INT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      favorite BOOLEAN,
       FOREIGN KEY (creator_id) REFERENCES users(id)
     );
   `);
@@ -119,7 +120,7 @@ app.post("/api/login", async (req, res) => {
     if (!match) return res.status(401).json({ error: "Email ou mot de passe incorrect" });
 
     const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: "2h" });
-    res.cookie("token", token, { httpOnly: true, secure: false, sameSite: "lax", maxAge: 2*60*60*1000, path: "/" });
+    res.cookie("token", token, { httpOnly: true, secure: false, sameSite: "lax", maxAge: 2 * 60 * 60 * 1000, path: "/" });
 
     res.json({ success: true, user: { id: user.id, username: user.username, email: user.email } });
   } catch (err) {
@@ -161,23 +162,23 @@ app.get("/api/me", authMiddleware, async (req, res) => {
 
 // Création d'une vidéo
 app.post("/api/video_requests", authMiddleware, async (req, res) => {
-  const { title, description, script, date, status,
-          estimated_video_duration, estimated_rushes_duration,
-          price_min, price_max, frequence, tags } = req.body;
+  const { title, description, script, status,
+    estimated_video_duration, estimated_rushes_duration,
+    price_min, price_max, frequence, tags, favorite } = req.body;
 
   try {
     const result = await query(
       `INSERT INTO video_requests
-       (title, description, script, date, status,
+       (title, description, script, status,
         estimated_video_duration, estimated_rushes_duration,
-        price_min, price_max, frequence, tags, creator_id)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        price_min, price_max, frequence, tags, creator_id, created_at, favorite)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        title, description, script, date, status,
+        title, description, script, status,
         estimated_video_duration, estimated_rushes_duration,
         price_min, price_max, frequence,
         tags ? JSON.stringify(tags) : null,
-        req.user.id
+        req.user.id, new Date(), favorite
       ]
     );
 
@@ -193,23 +194,23 @@ app.post("/api/video_requests", authMiddleware, async (req, res) => {
 
 // Modification d'une vidéo
 app.put("/api/video_requests/:id", authMiddleware, async (req, res) => {
-  const { title, description, script, date, status,
-          estimated_video_duration, estimated_rushes_duration,
-          price_min, price_max, frequence, tags } = req.body;
+  const { title, description, script, status,
+    estimated_video_duration, estimated_rushes_duration,
+    price_min, price_max, frequence, tags, favorite } = req.body;
   const { id } = req.params;
 
   try {
     await query(
       `UPDATE video_requests
-       SET title = ?, description = ?, script = ?, date = ?, status = ?,
+       SET title = ?, description = ?, script = ?, status = ?,
            estimated_video_duration = ?, estimated_rushes_duration = ?,
-           price_min = ?, price_max = ?, frequence = ?, tags = ?
+           price_min = ?, price_max = ?, frequence = ?, tags = ?, favorite = ?
        WHERE id = ? AND creator_id = ?`,
       [
-        title, description, script, date, status,
+        title, description, script, status,
         estimated_video_duration, estimated_rushes_duration,
         price_min, price_max, frequence,
-        tags ? JSON.stringify(tags) : null,
+        tags ? JSON.stringify(tags) : null, favorite,
         id, req.user.id
       ]
     );
@@ -229,6 +230,23 @@ app.put("/api/video_requests/:id", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
+
+app.put("/api/video_requests/:id/favorite", authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { favorite } = req.body; // true / false
+
+  try {
+    await query("UPDATE video_requests SET favorite = ? WHERE id = ?", [favorite ? 1 : 0, id]);
+    res.json({ success: true, favorite });
+  } catch (err) {
+    console.error("Erreur mise à jour favori :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+
+  console.log("Mise à jour favori :", id, favorite);
+
+});
+
 
 app.delete("/api/video_requests/:id", authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -250,11 +268,20 @@ app.delete("/api/video_requests/:id", authMiddleware, async (req, res) => {
 app.get("/api/video_requests", authMiddleware, async (req, res) => {
   try {
     const requests = await query(
-      "SELECT vr.*, u.username AS creator_name FROM video_requests vr JOIN users u ON vr.creator_id = u.id"
+      `SELECT vr.*, u.username AS creator_name
+       FROM video_requests vr
+       JOIN users u ON vr.creator_id = u.id
+       WHERE vr.creator_id = ?
+       ORDER BY vr.favorite DESC, vr.created_at DESC`,
+      [req.user.id] // on filtre directement par utilisateur
     );
-    const userVideos = requests
-      .filter(v => v.creator_id === req.user.id)
-      .map(v => ({ ...v, tags: v.tags ? JSON.parse(v.tags) : [] }));
+
+    // Convertir les tags JSON en tableau JS
+    const userVideos = requests.map(v => ({
+      ...v,
+      tags: v.tags ? JSON.parse(v.tags) : []
+    }));
+
     res.json(userVideos);
   } catch (err) {
     console.error("Erreur récupération vidéos :", err);
