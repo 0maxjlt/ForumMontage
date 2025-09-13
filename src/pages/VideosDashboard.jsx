@@ -429,6 +429,71 @@ function VideoDashboard() {
           </Grow>
         </Stack>
 
+        {/* --- Miniature --- */}
+        <Stack xs={12} md={6}>
+          <Grow in={cardsVisibility[8]}>
+            <Card sx={{ ...cardStyle, height: "100%", display: "flex", flexDirection: "column", backgroundColor: "#2E2E3A" }}>
+              <CardHeader title="Miniature" sx={{ bgcolor: "#2D2D2A", color: "white" }} />
+              <CardContent sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+
+                {/* Aperçu de la miniature si déjà présente */}
+                {formData.thumbnail ? (
+                  <Box
+                    component="img"
+                    src={formData.thumbnail}
+                    alt="Miniature"
+                    sx={{ width: "100%", maxHeight: 150, objectFit: "cover", borderRadius: 2, mb: 2 }}
+                  />
+                ) : (
+                  <Typography color="gray" mb={2}>Aucune miniature pour le moment</Typography>
+                )}
+
+                {/* Input fichier pour changer la miniature */}
+                {modif && (
+                  <Button variant="contained" component="label">
+                    Importer une miniature
+                    <input
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const file = e.target.files[0];
+                          const formDataToSend = new FormData();
+                          formDataToSend.append("thumbnail", file);
+
+                          try {
+                            const res = await fetch("http://localhost:3001/api/upload/thumbnail", {
+                              method: "POST",
+                              body: formDataToSend,
+                              credentials: "include", // pour envoyer cookies JWT
+                            });
+
+                            const data = await res.json();
+                            if (data.success) {
+                              // On met à jour le state avec l’URL renvoyée par le serveur
+                              setActiveFields((prev) => ({ ...prev, thumbnail: data.url }));
+                            } else {
+                              console.error("Erreur upload miniature:", data.error);
+                            }
+                          } catch (err) {
+                            console.error("Erreur réseau upload miniature:", err);
+                          }
+                        }
+                      }}
+                    />
+                  </Button>
+
+
+
+                )}
+              </CardContent>
+            </Card>
+          </Grow>
+        </Stack>
+
+
+
         {/* Créateur */}
         <Stack xs={12}>
           <Grow in={cardsVisibility[8]}>

@@ -122,12 +122,13 @@ function Dashboard() {
                     Tableau de bord
                 </Typography>
                 <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                    Bienvenue, {user.username} ! Voici vos prochaines vidéos à produire.
+                    Bienvenue, <Box component="span" sx={{ fontWeight: "bold", color: "text.primary" }}>{user.username}</Box> ! Voici vos prochaines vidéos à produire.
                 </Typography>
+
 
                 {videos.length > 0 ? (
                     <>
-                        <Grid container sx={{ mt: 2, gap: 2 }} >
+                        <Grid container sx={{ justifyContent: 'center', mt: 10, gap: 2 }} >
                             {videos.map(video => (
                                 <Grid item key={video.id} >
                                     <Card
@@ -135,6 +136,7 @@ function Dashboard() {
                                             display: 'flex',
                                             flexDirection: 'column',
                                             height: '100%',
+                                            width: 300,
                                             transition: 'transform 0.2s, box-shadow 0.2s',
                                             '&:hover': {
                                                 transform: 'translateY(-5px)',
@@ -148,7 +150,8 @@ function Dashboard() {
                                             <CardMedia
                                                 component="img"
                                                 height="180"
-                                                image={video.thumbnail || "/src/assets/image.png"}
+                                                width="400"
+                                                image={video.thumbnail || "src/assets/noThumbnail.jpg" }
                                                 alt={video.title || "Pas de miniature"}
                                             />
                                             <CardContent>
@@ -174,13 +177,25 @@ function Dashboard() {
                                                 >
                                                     {video.description || "Pas de description"}
                                                 </Typography>
-                                                <Typography
-                                                    variant="caption"
-                                                    color="text.secondary"
-                                                    sx={{ mt: 1, display: 'block' }}
-                                                >
-                                                    Statut : {video.status || "open"}
-                                                </Typography>
+
+                                                <Stack direction="row" spacing={1} justifyContent="space-between" sx={{ mt: 1 }}>
+                                                    <Typography
+                                                        variant="caption"
+                                                        color="text.secondary"
+                                                        sx={{ mt: 1, display: 'block' }}
+                                                    >
+                                                        Statut : {video.status || "open"}
+                                                    </Typography>
+
+                                                    <Typography
+                                                        variant="caption"
+                                                        color="text.secondary"
+                                                        sx={{ mt: 1, display: 'block' }}
+                                                    >
+                                                        {new Date(video.created_at).toLocaleDateString() || "Inconnu"}
+                                                    </Typography>
+
+                                                </Stack>
                                             </CardContent>
 
                                         </CardActionArea>

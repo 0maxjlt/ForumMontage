@@ -2,9 +2,11 @@ import express from "express";
 import mariadb from "mariadb";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { video } from "framer-motion/client"; // si tu en as vraiment besoin
+import { th, video } from "framer-motion/client"; // si tu en as vraiment besoin
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import multer from "multer";
+import path from "path";
 
 const app = express();
 const PORT = 3001;
@@ -67,6 +69,7 @@ async function initDb() {
       creator_id INT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       favorite BOOLEAN,
+      thumbnail VARCHAR(255),
       FOREIGN KEY (creator_id) REFERENCES users(id)
     );
   `);
@@ -86,6 +89,39 @@ async function initDb() {
 }
 
 initDb().catch(err => console.error("Erreur initialisation BDD :", err));
+
+
+// ------------------- CONFIG MULTER (upload fichiers) -------------------
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // max 5 Mo
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith("image/")) {
+      return cb(new Error("Seules les images sont autorisées"));
+    }
+    cb(null, true);
+  },
+});
+
+app.post("/api/upload/thumbnail", authMiddleware, upload.single("thumbnail"), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "Aucun fichier envoyé" });
+
+  // URL accessible de la miniature (si tu sers /uploads)
+  const fileUrl = `http://localhost:${PORT}/uploads/${req.file.filename}`;
+  res.json({ success: true, url: fileUrl });
+});
+
+app.use("/uploads", express.static("uploads"));
+
 
 // ------------------- VARIABLES -------------------
 const SECRET = "unSuperSecretUltraSolide";
@@ -164,21 +200,22 @@ app.get("/api/me", authMiddleware, async (req, res) => {
 app.post("/api/video_requests", authMiddleware, async (req, res) => {
   const { title, description, script, status,
     estimated_video_duration, estimated_rushes_duration,
-    price_min, price_max, frequence, tags, favorite } = req.body;
+    price_min, price_max, frequence, tags, favorite, thumbnail } = req.body;
 
   try {
     const result = await query(
       `INSERT INTO video_requests
        (title, description, script, status,
         estimated_video_duration, estimated_rushes_duration,
-        price_min, price_max, frequence, tags, creator_id, created_at, favorite)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        price_min, price_max, frequence, tags, creator_id, created_at, favorite, thumbnail)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         title, description, script, status,
         estimated_video_duration, estimated_rushes_duration,
         price_min, price_max, frequence,
         tags ? JSON.stringify(tags) : null,
-        req.user.id, new Date(), favorite
+        req.user.id, new Date(), favorite, thumbnail
+
       ]
     );
 
@@ -196,7 +233,7 @@ app.post("/api/video_requests", authMiddleware, async (req, res) => {
 app.put("/api/video_requests/:id", authMiddleware, async (req, res) => {
   const { title, description, script, status,
     estimated_video_duration, estimated_rushes_duration,
-    price_min, price_max, frequence, tags, favorite } = req.body;
+    price_min, price_max, frequence, tags, favorite, thumbnail } = req.body;
   const { id } = req.params;
 
   try {
@@ -204,13 +241,14 @@ app.put("/api/video_requests/:id", authMiddleware, async (req, res) => {
       `UPDATE video_requests
        SET title = ?, description = ?, script = ?, status = ?,
            estimated_video_duration = ?, estimated_rushes_duration = ?,
-           price_min = ?, price_max = ?, frequence = ?, tags = ?, favorite = ?
+           price_min = ?, price_max = ?, frequence = ?, tags = ?, favorite = ?, thumbnail = ?
        WHERE id = ? AND creator_id = ?`,
       [
         title, description, script, status,
         estimated_video_duration, estimated_rushes_duration,
         price_min, price_max, frequence,
-        tags ? JSON.stringify(tags) : null, favorite,
+        tags ? JSON.stringify(tags) : null, favorite, thumbnail,
+
         id, req.user.id
       ]
     );
