@@ -110,6 +110,17 @@ function VideoDashboard() {
         .filter((t) => t.length > 0);
     }
 
+    if (newData.date) {
+      const d = new Date(newData.date);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const min = String(d.getMinutes()).padStart(2, "0");
+      const ss = String(d.getSeconds()).padStart(2, "0");
+      newData.date = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+    }
+
     console.log("Données envoyées au serveur :", newData);
 
     try {
@@ -135,6 +146,27 @@ function VideoDashboard() {
       navigate(`/dashboard/${updatedVideo.id}`);
     } catch (err) {
       console.error("Erreur mise à jour vidéo :", err);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette vidéo ?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:3001/api/video_requests/${formData.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        console.error("Erreur suppression vidéo :", await res.json());
+        return;
+      }
+
+      console.log("Vidéo supprimée");
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Erreur suppression vidéo :", err);
     }
   };
 
@@ -379,17 +411,17 @@ function VideoDashboard() {
                 ) : (
 
                   <>
-                  <Stack display={"flex"} flexDirection={"row"} flexWrap={"wrap"}>
-                    {formData.tags.map((tag, index) => (
-                        
-                          <Chip
-                            key={index}
-                            label={tag}
-                            sx={{ mr: 1, mb: 1, bgcolor: "#2D2D2A", color: "white", boxShadow: 2 }}
-                          />
-                      
+                    <Stack display={"flex"} flexDirection={"row"} flexWrap={"wrap"}>
+                      {formData.tags.map((tag, index) => (
+
+                        <Chip
+                          key={index}
+                          label={tag}
+                          sx={{ mr: 1, mb: 1, bgcolor: "#2D2D2A", color: "white", boxShadow: 2 }}
+                        />
+
                       ))}
-                  </Stack>
+                    </Stack>
                   </>
                 )}
               </CardContent>
@@ -406,7 +438,7 @@ function VideoDashboard() {
                   Créateur : <strong>{video.creator_name}</strong>
                 </Typography>
                 <Typography variant="body2" color="gray">
-                  Créé le : {new Date(video.created_at).toLocaleString()}
+                  Créé le : {new Date(video.created_at).toISOString().slice(0, 19).replace("T", " ")}
                 </Typography>
               </CardContent>
             </Card>
@@ -417,9 +449,17 @@ function VideoDashboard() {
       {/* Boutons globaux */}
       <Stack direction="row" spacing={2} justifyContent="center" mt={4}>
         {!modif ? (
-          <Button sx={buttonStyle} color="primary" variant="contained" onClick={() => setModif(true)}>
-            Modifier
-          </Button>
+          <>
+            <Button sx={buttonStyle} color="primary" variant="contained" onClick={() => setModif(true)}>
+              Modifier
+            </Button>
+
+            <Button sx={buttonStyle} color="error" variant="contained" onClick={handleDelete}>
+              <DeleteIcon sx={{ mr: 1 }} />
+              Supprimer
+            </Button>
+          </>
+
         ) : (
           <>
             <Button sx={buttonStyle} color="success" variant="contained" onClick={handleSave}>

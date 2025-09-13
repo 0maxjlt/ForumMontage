@@ -11,7 +11,19 @@ import {
     CircularProgress,
     Box,
     Button,
-} from '@mui/material';
+    Input,
+    CardActions,
+    Checkbox,
+    FormControlLabel,
+} from "@mui/material";
+import { CheckBox, DeleteForeverOutlined, Favorite, FavoriteBorder } from "@mui/icons-material";
+import { yellow, red } from "@mui/material/colors";
+import { DeleteForever } from "@mui/icons-material";
+import IconButton from '@mui/material/IconButton';
+import DeleteIcon from '@mui/icons-material/Delete';
+
+
+
 
 export const DashboardContext = createContext();
 
@@ -37,7 +49,7 @@ function Dashboard() {
                 const data = await res.json();
 
                 setVideos(data); // toutes les vidéos reçues
-                
+
                 // Définir l'utilisateur connecté à partir de la première vidéo (si elle existe)
                 if (data.length > 0) {
                     setUser({
@@ -79,6 +91,12 @@ function Dashboard() {
 
     console.log("User:", user);
 
+    const handleSelect = (videoId) => {
+        setVideos(videos.map(video =>
+            video.id === videoId ? { ...video, selected: !video.selected } : video
+        ));
+    }
+
     return (
         <DashboardContext.Provider value={{ user, videos }}>
             <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -106,6 +124,8 @@ function Dashboard() {
                                             }
                                         }}
                                     >
+
+
                                         <CardActionArea onClick={() => navigate(`/dashboard/${video.id}`)}>
                                             <CardMedia
                                                 component="img"
@@ -144,7 +164,39 @@ function Dashboard() {
                                                     Statut : {video.status || "open"}
                                                 </Typography>
                                             </CardContent>
+
                                         </CardActionArea>
+                                        <CardActions>
+
+                                            <Checkbox
+                                                onChange={() => handleSelect(video.id)}
+                                            />
+
+                                            <Checkbox
+
+                                                icon={<FavoriteBorder />}
+                                                checkedIcon={<Favorite />}
+                                                sx={{ color: yellow[800], '&.Mui-checked': { color: yellow[600] } }}
+                                                checked={console.log(video.liked || false)}
+                                            />
+
+
+
+                                            <IconButton
+                                                aria-label="delete"
+                                            >
+                                                <DeleteIcon
+                                                    color="error"
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm("Êtes-vous sûr de vouloir supprimer cette vidéo ?")) {
+                                                            await handleDelete(video.id);
+                                                        }
+                                                    }}
+                                                />
+                                            </IconButton>
+
+                                        </CardActions>
                                     </Card>
                                 </Grid>
                             ))}
@@ -156,6 +208,7 @@ function Dashboard() {
                         </Typography>
 
 
+
                     </>
                 ) : (
 
@@ -165,9 +218,9 @@ function Dashboard() {
 
                 )}
 
-                <Box display="flex" flexDirection="column" alignItems="center" textAlign="center" sx={{ mt: 1 }}>
+                <Box display="flex" flexDirection="column" alignItems="center" textAlign="center" sx={{ m: 1, gap: 2 }}>
 
-                    <Box justifyContent="center" alignItems="center" sx={{ m: 2 }}>
+                    <Box sx={{ m: 2, gap: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' } }}>
                         <Button
                             variant="contained"
                             color="primary"
@@ -181,7 +234,7 @@ function Dashboard() {
                                             title: "Nouvelle vidéo",
                                             description: "",
                                             script: "",
-                                            date: new Date(),
+                                            date: new Date().toISOString().slice(0, 19).replace("T", " "),
                                             status: "open",
                                             estimated_video_duration: "",
                                             estimated_rushes_duration: "",
@@ -212,6 +265,41 @@ function Dashboard() {
                         >
                             Créer une vidéo
                         </Button>
+
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={async () => {
+                                try {
+                                    // Récupérer les vidéos sélectionnées
+                                    const selectedVideos = videos.filter(video => video.selected);
+                                    if (selectedVideos.length === 0) {
+                                        alert("Veuillez sélectionner au moins une vidéo à supprimer.");
+                                        return;
+                                    }
+
+                                    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer ${selectedVideos.length} vidéo(s) ? Cette action est irréversible.`)) {
+                                        return;
+                                    }
+                                    // Supprimer les vidéos sélectionnées
+                                    await Promise.all(selectedVideos.map(video =>
+                                        fetch(`http://localhost:3001/api/video_requests/${video.id}`, {
+                                            method: "DELETE",
+                                            credentials: "include",
+                                        })
+                                    ));
+
+                                    // Mettre à jour la liste des vidéos
+                                    setVideos(videos.filter(video => !video.selected));
+                                    alert("Vidéos supprimées avec succès.");
+                                } catch (err) {
+                                    console.error("Erreur suppression vidéo :", err);
+                                }
+                            }}
+                        >
+                            Supprimer vidéo
+                        </Button>
+
                     </Box>
                 </Box>
 
