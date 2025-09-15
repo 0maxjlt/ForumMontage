@@ -348,6 +348,37 @@ app.get("/api/video_requests/:vid", authMiddleware, async (req, res) => {
   }
 });
 
+// Récupération des vidéos publiques (forum)
+app.get("/api/publicVideos", async (req, res) => {
+  try {
+    const videos = await query(`
+      SELECT 
+        video_requests.id AS video_id,
+        video_requests.title,
+        video_requests.description,
+        video_requests.status,
+        video_requests.tags,
+        video_requests.estimated_video_duration,
+        video_requests.estimated_rushes_duration,
+        video_requests.price_min,
+        video_requests.price_max,
+        video_requests.created_at AS video_created_at,
+        users.username
+      FROM video_requests
+      JOIN users ON video_requests.creator_id = users.id
+      ORDER BY users.id, video_requests.created_at DESC
+    `);
+    
+    console.log("Vidéos publiques récupérées :", videos);
+    res.json(videos);
+  } catch (err) {
+    console.error("Erreur récupération vidéos publiques :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+
+
 // ------------------- ROUTES APPLICATION -------------------
 
 // Candidate à un souhait
@@ -380,17 +411,6 @@ app.get("/api/applications/:requestId", async (req, res) => {
   }
 });
 
-// Route forum
-app.post("/forum", (req, res) => {
-  console.log("Connecté à la route Forum, envoie des données");
-  let videoList = [];
-  if (typeof users !== "undefined") {
-    for (let i = 0; i < users.length; i++) {
-      users[i].videos?.forEach(video => videoList.push(video));
-    }
-  }
-  res.json(videoList.length ? { success: true, data: videoList } : { success: false, message: "Aucune vidéo trouvée" });
-});
 
 // ------------------- LANCEMENT -------------------
 app.listen(PORT, () => {

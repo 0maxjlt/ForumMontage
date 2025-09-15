@@ -11,13 +11,20 @@ function Layout() {
       <MyDrawer />
 
       {/* Contenu principal */}
-      <Box component="main" sx={{ flexGrow: 1 }}>
-        {/* En-tête de page */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          ml: { sm: `260px` }, // pour laisser la place au drawer sur desktop
+        }}
+      >
+        {/* En-tête de page 
         <MyBreadcrumbs />
 
-        {/* Séparateur */}
+        
         <hr />
         <br />
+        */}
 
         {/* Contenu dynamique (Forum, Dashboard...) */}
         <Outlet />

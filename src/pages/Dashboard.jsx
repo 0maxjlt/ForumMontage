@@ -242,8 +242,11 @@ function Dashboard() {
                                                                             if (b.favorite !== a.favorite) return b.favorite - a.favorite;
 
                                                                             // Puis par date décroissante
+                                                                            console.log(new Date(b.created_at), new Date(a.created_at));
                                                                             return new Date(b.created_at) - new Date(a.created_at);
                                                                         });
+
+
 
                                                                         // 3️⃣ Retourner ce nouveau tableau -> React re-render
                                                                         console.log("Vidéos triées :", sortedVideos);

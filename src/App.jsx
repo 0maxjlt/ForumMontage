@@ -30,18 +30,19 @@ function App() {
   return (
     <Fragment>
       <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-     
+        <CssBaseline />
+
         <Router>
-            <Routes>
-              <Route path="/" element={<Layout/>} >
-                <Route path="/" element={<Home />} />  {/* Route de connexion */}
-                <Route path="/login" element={<Login />} />  {/* Route de connexion */}
-                <Route path="/dashboard" element={<Dashboard />} />  {/* Route de connexion */}
-                <Route path ="/dashboard/:id" element={<VideosDashboard />} />
-                <Route path = "/Forum" element={<Forum />} />
-              </Route>
-            </Routes>
+          <Routes>
+            <Route path="/login" element={<Login />} />  {/* Route de connexion */}
+            
+            <Route path="/" element={<Layout />} >
+              <Route path="/" element={<Home />} />  {/* Route de connexion */}
+              <Route path="/dashboard" element={<Dashboard />} />  {/* Route de connexion */}
+              <Route path="/dashboard/:id" element={<VideosDashboard />} />
+              <Route path="/Forum" element={<Forum />} />
+            </Route>
+          </Routes>
         </Router>
       </ThemeProvider>
     </Fragment>

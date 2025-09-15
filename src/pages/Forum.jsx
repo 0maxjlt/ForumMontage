@@ -46,8 +46,8 @@ function Forum() {
     const matchesPrice =
       !selectedPrice || // si aucun filtre n’est appliqué
       (
-        video.price[1] >= selectedPrice[0] && // max vidéo ≥ min sélectionné
-        video.price[0] <= selectedPrice[1]    // min vidéo ≤ max sélectionné
+        video.price_max >= selectedPrice[0] && // max vidéo ≥ min sélectionné
+        video.price_min <= selectedPrice[1]    // min vidéo ≤ max sélectionné
       );
 
     return matchesSearch && matchesStatus && matchesPrice;
@@ -64,25 +64,17 @@ function Forum() {
   // Pas besoin de serv ici, on peut directement faire la requête
 
   useEffect(() => {
-    fetch("http://localhost:3001/forum", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-    })
+    fetch("http://localhost:3001/api/publicVideos")
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) {
-          setVideos(data.data);
-        } else {
-          console.log("Aucune vidéo trouvée");
-        }
+        console.log("Vidéos récupérées :", data);
+        setVideos(data); // directement le tableau
       })
       .catch((err) => {
         console.error("Erreur lors de la récupération des vidéos :", err);
       });
-  }, []);
+  }, [navigate]);
+
 
   return (
     <>
@@ -195,14 +187,14 @@ function Forum() {
                       <Typography variant="body2" sx={{ mb: 0.5 }}>
                         Prix estimé :{" "}
                         <span style={{ color: "#58a6ff" }}>
-                          {video.price[0]} - {video.price[1]} €
+                          {video.price_min} - {video.price_max} €
                         </span>
                       </Typography>
 
 
                     </Stack>
 
-                    {/* Tags + Status */}
+                    {/* Tags + Status 
                     <Box
                       mt={2}
                       display="flex"
@@ -226,6 +218,7 @@ function Forum() {
                           />
                         ))}
                       </Box>
+
                       <Typography
                         variant="body2"
                         fontStyle="italic"
@@ -234,6 +227,7 @@ function Forum() {
                         {video.status}
                       </Typography>
                     </Box>
+                    */}
                   </CardContent>
                 </Card>
               </Grid2>
