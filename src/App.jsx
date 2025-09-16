@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment } from 'react'
 import './App.css'
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
@@ -16,8 +16,7 @@ import VideosDashboard from "./pages/VideosDashboard";
 import Forum from "./pages/Forum";
 import Layout from './components/Layout';
 import MyBreadcrumbs from './components/Header';
-
-
+import { MessageProvider } from './components/Context'; // ✅ import correct
 
 const darkTheme = createTheme({
   palette: {
@@ -26,32 +25,28 @@ const darkTheme = createTheme({
 });
 
 function App() {
-
   return (
     <Fragment>
       <ThemeProvider theme={darkTheme}>
         <CssBaseline />
 
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />  {/* Route de connexion */}
-            
-            <Route path="/" element={<Layout />} >
-              <Route path="/" element={<Home />} />  {/* Route de connexion */}
-              <Route path="/dashboard" element={<Dashboard />} />  {/* Route de connexion */}
-              <Route path="/dashboard/:id" element={<VideosDashboard />} />
-              <Route path="/Forum" element={<Forum />} />
-            </Route>
-          </Routes>
-        </Router>
+        <MessageProvider> {/* ✅ Le Provider autour du Router */}
+          <Router>
+            <Routes>
+              <Route path="/" element={<Layout />} >
+                <Route index element={<Home />} />  
+                <Route path="login" element={<Login />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="dashboard/:id" element={<VideosDashboard />} />
+                <Route path="forum" element={<Forum />} />
+              </Route>
+            </Routes>
+          </Router>
+        </MessageProvider>
+
       </ThemeProvider>
     </Fragment>
   );
-
-
-
-
-
 }
 
-export default App
+export default App;

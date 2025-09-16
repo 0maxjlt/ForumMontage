@@ -366,11 +366,18 @@ app.get("/api/publicVideos", async (req, res) => {
         users.username
       FROM video_requests
       JOIN users ON video_requests.creator_id = users.id
-      ORDER BY users.id, video_requests.created_at DESC
+      WHERE video_requests.status = 'open'
+      ORDER BY video_requests.created_at DESC
     `);
-    
-    console.log("Vidéos publiques récupérées :", videos);
-    res.json(videos);
+
+    // Ici on parse les tags
+    const parsedVideos = videos.map(video => ({
+      ...video,
+      tags: video.tags ? JSON.parse(video.tags) : [] // si null → tableau vide
+    }));
+
+    console.log("Vidéos publiques récupérées :", parsedVideos);
+    res.json(parsedVideos);
   } catch (err) {
     console.error("Erreur récupération vidéos publiques :", err);
     res.status(500).json({ error: "Erreur serveur" });

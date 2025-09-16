@@ -1,4 +1,4 @@
-import { useEffect, useState, createContext } from "react";
+import { useEffect, useState, createContext, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     Card,
@@ -23,7 +23,7 @@ import { DeleteForever } from "@mui/icons-material";
 import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-
+import { MessageContext } from "../components/Context";
 
 
 export const DashboardContext = createContext();
@@ -32,6 +32,7 @@ function Dashboard() {
     const [user, setUser] = useState(null);
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { setMessage } = useContext(MessageContext);
 
     const navigate = useNavigate();
     useEffect(() => {
@@ -43,6 +44,7 @@ function Dashboard() {
                 });
 
                 if (res.status === 401) {
+                    setMessage({text: "Vous devez vous connecter pour accéder à cette page.", target: "login"});
                     navigate("/login"); // pas connecté
                     return;
                 }
@@ -71,6 +73,7 @@ function Dashboard() {
 
             } catch (err) {
                 console.error("Erreur fetch vidéos :", err);
+                setMessage("⚠️ Vous devez être connecté pour accéder au dashboard ! a");
                 navigate("/login");
             } finally {
                 setLoading(false);
@@ -151,7 +154,7 @@ function Dashboard() {
                                                 component="img"
                                                 height="180"
                                                 width="400"
-                                                image={video.thumbnail || "src/assets/noThumbnail.jpg" }
+                                                image={video.thumbnail || "src/assets/noThumbnail.jpg"}
                                                 alt={video.title || "Pas de miniature"}
                                             />
                                             <CardContent>

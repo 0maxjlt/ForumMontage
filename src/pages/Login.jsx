@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button, Stack, Typography, Box } from '@mui/material';
 import Popup from "../components/Popup";
-import { useEffect } from "react";
-
+import { useEffect, useContext } from "react";
+import { MessageContext } from "../components/Context";
+import Alert from "../components/Alert";
 
 function Login() {
   const [isRegister, setIsRegister] = useState(false);
@@ -13,15 +14,21 @@ function Login() {
   const [fieldError, setFieldError] = useState(null); // pour les TextField
   const [popupMessage, setPopupMessage] = useState(null); // pour le Popup
 
+  const { message, setMessage } = useContext(MessageContext); // ✅ correct
+
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Déconnecter l'utilisateur automatiquement
-    fetch("http://localhost:3001/api/logout", {
-      method: "POST",
-      credentials: "include"
-    });
-  }, []);
+    if (message?.target === "login") {
+      const timer = setTimeout(() => setMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+
+
+
+  }, [message, setMessage]);
+
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -80,8 +87,13 @@ function Login() {
         <Popup popup={popupMessage} setPopup={setPopupMessage} />
       )}
 
+      {message?.target === "login" && (
+        <Alert message={message.text} sx={{ mb: 2 }} />
+        
+      )}
+
       <Box display="flex" justifyContent="center" alignItems="center">
-        <Box width={350} m={4} p={4} boxShadow={3}>
+        <Box width={350} mt={20} p={4} boxShadow={3}>
           <Typography variant="h5" textAlign="center" mb={3}>
             {isRegister ? "Inscription" : "Connexion"}
           </Typography>
