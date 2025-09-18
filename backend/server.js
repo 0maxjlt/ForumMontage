@@ -59,7 +59,7 @@ async function initDb() {
       title VARCHAR(255) NOT NULL,
       description TEXT NOT NULL,
       script TEXT,
-      status ENUM('open','in_progress','done') DEFAULT 'open',
+      status ENUM('open','in_progress','closed') DEFAULT 'closed',
       tags TEXT,
       estimated_video_duration VARCHAR(50),
       estimated_rushes_duration VARCHAR(50),
@@ -72,7 +72,7 @@ async function initDb() {
       thumbnail VARCHAR(255),
       FOREIGN KEY (creator_id) REFERENCES users(id)
     );
-  `);
+  `); 
 
   await query(`
     CREATE TABLE IF NOT EXISTS applications (
@@ -404,8 +404,38 @@ app.post("/api/applications", async (req, res) => {
   }
 });
 
+// Récupération d’une vidéo publique par username + videoId quand on clique sur une vidéo dans le forum
+
+app.get("/api/videos/:username/:videoId", authMiddleware, async (req, res) => {
+  const { username, videoId } = req.params;
+
+  try {
+    const video = await query(
+      `SELECT vr.*, u.username AS creator_name
+       FROM video_requests vr
+       JOIN users u ON vr.creator_id = u.id
+       WHERE vr.id = ? AND u.username = ? AND vr.status = 'open'`,
+      [videoId, username]
+    );
+
+    console.log("Vidéo récupérée :", video);
+    if (!video[0]) return res.status(404).json({ error: "Vidéo introuvable ou non autorisée" });
+
+    const parsedVideos = video.map(video => ({
+      ...video,
+      tags: video.tags ? JSON.parse(video.tags) : [] // si null → tableau vide
+    }));
+
+    console.log("Vidéos publiques récupérées :", parsedVideos[0]);
+    res.json(parsedVideos[0]);
+  } catch (err) {
+    console.error("Erreur récupération vidéo :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 // Voir les candidatures d’un souhait
-app.get("/api/applications/:requestId", async (req, res) => {
+app.get("/api/applications/:requestId", authMiddleware, async (req, res) => {
   try {
     const apps = await query(
       "SELECT a.*, u.username AS editor_name FROM applications a JOIN users u ON a.editor_id = u.id WHERE a.request_id = ?",

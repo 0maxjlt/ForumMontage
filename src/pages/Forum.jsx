@@ -103,7 +103,7 @@ function Forum() {
         {filteredVideos.map((video) => (
           <Box
             key={video.id}
-            onClick={() => navigate(`/forum/${video.id}`)}
+            onClick={() => navigate(`/video/${video.username}/${video.video_id}`)}
           >
             <Card
               sx={{

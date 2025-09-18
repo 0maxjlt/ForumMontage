@@ -319,10 +319,10 @@ function Dashboard() {
                                         headers: { "Content-Type": "application/json" },
                                         credentials: "include", // ⚡ envoie le cookie
                                         body: JSON.stringify({
-                                            title: "Nouvelle vidéo",
+                                            title: "",
                                             description: "",
                                             script: "",
-                                            status: "open",
+                                            status: "closed",
                                             estimated_video_duration: "",
                                             estimated_rushes_duration: "",
                                             price_min: null,

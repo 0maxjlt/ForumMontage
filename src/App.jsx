@@ -14,6 +14,10 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import VideosDashboard from "./pages/VideosDashboard";
 import Forum from "./pages/Forum";
+import VideoAppli from "./pages/VideoAppli";
+
+
+
 import Layout from './components/Layout';
 import MyBreadcrumbs from './components/Header';
 import { MessageProvider } from './components/Context'; // ✅ import correct
@@ -39,6 +43,7 @@ function App() {
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="dashboard/:id" element={<VideosDashboard />} />
                 <Route path="forum" element={<Forum />} />
+                <Route path="video/:username/:videoId" element={<VideoAppli />} />
               </Route>
             </Routes>
           </Router>
