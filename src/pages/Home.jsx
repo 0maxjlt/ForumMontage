@@ -26,7 +26,7 @@ export default function Accueil() {
           sx={{ mb: 10 }}
         >
           <Typography variant="h2" fontWeight="bold" gutterBottom>
-            Bienvenue sur chepa frr
+            Bienvenue sur jsp
           </Typography>
           <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: "auto", mb: 4 }}>
             Connectez créateurs et monteurs pour collaborer rapidement et efficacement.

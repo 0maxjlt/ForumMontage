@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import {
     Stack,
     Typography,
@@ -16,6 +16,7 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { MessageContext } from "../components/Context";
 import PersonIcon from "@mui/icons-material/Person";
+import { s } from 'framer-motion/client';
 
 const VideoAppli = () => {
     const [motivation, setMotivation] = useState('');
@@ -50,11 +51,31 @@ const VideoAppli = () => {
         fetchVideo();
     }, [username, videoId]);
 
+    useEffect(() => {
+        fetch(`http://localhost:3001/api/applications/${videoId}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error(`Erreur lors de la vérification de la candidature (status ${res.status})`);
+                return res.json();
+            })
+            .then((data) => {
+                if (data.result === 'exists') {
+                    console.log(data.created);
+                    setMotivation(data.application.message);
+                    setSubmitted(true);
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+            });
+    }, [navigate]);
+
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        
-
-        
 
         fetch(`http://localhost:3001/api/applications`, {
             method: 'POST',
@@ -67,10 +88,10 @@ const VideoAppli = () => {
         })
             .then((res) => {
                 if (!res.ok) throw new Error(`Erreur lors de l'envoi de la candidature (status ${res.status})`);
-                setMessage({ text: 'Candidature envoyée avec succès !', target: 'home' });
+                
                 setSubmitted(true);
                 console.log("Candidature envoyée :", { video_id: videoId, motivation });
-                navigate('/');
+                
             })
             .catch((err) => {
                 setMessage({ text: err.message || "Erreur lors de l'envoi de la candidature.", target: 'video' });
@@ -82,13 +103,14 @@ const VideoAppli = () => {
     return (
         <Box
             sx={{
+                display: 'flex',
                 minHeight: '100vh',
-
                 color: '#fff',
                 p: { xs: 2, md: 6 },
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
+                justifyContent: 'center',
             }}
         >
             {loading && <CircularProgress color="secondary" sx={{ mt: 4 }} />}
@@ -98,13 +120,12 @@ const VideoAppli = () => {
                     sx={{
                         width: '100%',
                         maxWidth: 720,
+
                         mb: 4,
                         borderRadius: 3,
                         overflow: 'hidden',
-                        bgcolor: 'rgba(20, 20, 20, 0.9)',
-                        backdropFilter: 'blur(6px)',
-                        boxShadow: '0 8px 20px rgba(0,0,0,0.6)',
-                        border: '1px solid #333',
+                        bgcolor: '#050505ff',
+
                     }}
                 >
                     {/* Thumbnail */}
@@ -114,11 +135,14 @@ const VideoAppli = () => {
                             src={video.thumbnail}
                             alt="Miniature"
                             sx={{
-                                width: '100%',
-                                maxHeight: 280,
-                                objectFit: 'cover',
+                                width: "100%",
+                                aspectRatio: "16 / 9",   // garde un format constant
+                                objectFit: "cover",      // remplit sans déformer
+                                maxHeight: 300,
                             }}
                         />
+
+
                     )}
 
                     <CardContent>
@@ -145,39 +169,43 @@ const VideoAppli = () => {
                         <Divider sx={{ bgcolor: "#2d2d2d", mb: 2 }} />
 
                         {/* Title + Description */}
-                        <Box display="flex" flexDirection="column">
+                        <Box display="flex" flexDirection="column" sx={{ minWidth: 0 }}>
                             <Tooltip title={video.title}>
                                 <Typography
                                     variant="h5"
                                     fontWeight="600"
-                                    noWrap
                                     align="left"
                                     sx={{
-                                        whiteSpace: 'pre-line',     // <-- Respecte les retours à la ligne de ta DB
-                                        overflowWrap: 'break-word',
-                                        maxWidth: "100%",
-                                        color: "#f0f0f0",
+                                        whiteSpace: 'pre-line',
+                                        overflowWrap: 'anywhere',   // meilleure compatibilité moderne
+                                        wordBreak: 'break-word',
+                                        hyphens: 'auto',
+                                        width: '100%',
+                                        minWidth: 0,
                                     }}
                                 >
                                     {video.title}
                                 </Typography>
                             </Tooltip>
+
                             <Tooltip title={video.description}>
                                 <Typography
                                     variant="body2"
                                     color="gray"
                                     align="left"
                                     sx={{
-                                        whiteSpace: 'pre-line',     // <-- Respecte les retours à la ligne de ta DB
-                                        overflowWrap: 'break-word',
-                                        maxWidth: "100%",
+                                        whiteSpace: 'pre-line',
+                                        overflowWrap: 'anywhere',
+                                        wordBreak: 'break-word',
+                                        hyphens: 'auto',
+                                        width: '100%',
+                                        minWidth: 0,
                                     }}
                                 >
                                     {video.description}
                                 </Typography>
                             </Tooltip>
                         </Box>
-
                         <Divider sx={{ bgcolor: "#2d2d2d", my: 2 }} />
 
                         {/* Durées + Prix */}
@@ -246,65 +274,77 @@ const VideoAppli = () => {
                 </Card>
             )}
 
-            {/* Formulaire de candidature */}
-            <Card
-                sx={{
-                    width: '100%',
-                    maxWidth: 720,
-                    p: 4,
-                    borderRadius: 3,
-                    bgcolor: 'rgba(20, 20, 20, 0.85)',
-                    boxShadow: '0 6px 16px rgba(0,0,0,0.6)',
-                    backdropFilter: 'blur(4px)',
-                    border: '1px solid #333',
-                }}
-            >
-                <Typography variant="h5" fontWeight="700" mb={3}>
-                    Appliquer pour cette offre
-                </Typography>
 
-                {submitted ? (
-                    <Typography color="success.main" sx={{ mt: 2 }}>
-                        Merci pour votre candidature !
+            {submitted && !loading && video && (
+                <Stack>
+                    <Typography variant="body2" color="gray">
+                        {motivation}
                     </Typography>
-                ) : (
-                    <form onSubmit={handleSubmit}>
-                        <Stack spacing={3}>
-                            <TextField
-                                label="Motivation"
-                                value={motivation}
-                                onChange={(e) => setMotivation(e.target.value)}
-                                required
-                                multiline
-                                rows={5}
-                                fullWidth
-                                variant="filled"
-                                InputProps={{
-                                    sx: { bgcolor: '#1a1a1a', color: 'white', borderRadius: 2 },
-                                }}
-                                InputLabelProps={{ sx: { color: '#aaa' } }}
-                            />
-                            <Button
-                                type="submit"
-                                sx={{
-                                    background: 'linear-gradient(45deg, #2196F3, #21CBF3)',
-                                    color: 'white',
-                                    fontWeight: 700,
-                                    py: 1.5,
-                                    mt: 1,
-                                    '&:hover': {
-                                        background: 'linear-gradient(45deg, #1976d2, #21CBF3)',
-                                        transform: 'scale(1.02)',
-                                    },
-                                    transition: 'all 0.2s ease-in-out',
-                                }}
-                            >
-                                Envoyer la candidature
-                            </Button>
+                </Stack>
+            )}
+
+            {/* Formulaire de candidature */}
+            {!submitted && !loading && video && (
+                <Card
+                    sx={{
+                        width: '100%',
+                        maxWidth: 720,
+                        p: 4,
+                        borderRadius: 3,
+                        bgcolor: '#050505ff',
+                    }}
+                >
+                    <Typography variant="h5" fontWeight="400" justifyContent={"flex-start"} mb={3}>
+                        Envoyer une message au créateur
+                    </Typography>
+
+                    {submitted ? (
+                        <Stack spacing={2} alignItems="center">
+                            <Typography color="green">{motivation}</Typography>
                         </Stack>
-                    </form>
-                )}
-            </Card>
+
+                    ) : (
+                        <form onSubmit={handleSubmit}>
+                            <Stack spacing={3}>
+                                <TextField
+                                    label="Message"
+                                    value={motivation}
+                                    onChange={(e) => setMotivation(e.target.value)}
+                                    required
+                                    multiline
+                                    rows={6}
+                                    fullWidth
+                                    variant="filled"
+                                    placeholder={"Explique en quelques lignes pourquoi tu serais le monteur idéal pour cette vidéo..."}
+                                    helperText="Un message clair et complet aide le créateur à mieux te connaître."
+                                    InputProps={{
+                                        sx: { bgcolor: '#1a1a1a', color: 'white', borderRadius: 2 },
+                                    }}
+                                    InputLabelProps={{ sx: { color: '#aaa' } }}
+                                />
+
+                                <Button
+                                    type="submit"
+                                    sx={{
+                                        background: '#46965eff',
+                                        color: 'white',
+                                        fontWeight: 700,
+                                        py: 1.5,
+                                        mt: 1,
+                                        '&:hover': {
+                                            background: '#357e4bff',
+                                            transform: 'scale(1.02)',
+                                        },
+                                        transition: 'all 0.2s ease-in-out',
+                                    }}
+                                >
+                                    Envoyer la candidature
+                                </Button>
+                            </Stack>
+                        </form>
+                    )}
+                </Card>
+            )}
         </Box>
     );
 };

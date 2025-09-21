@@ -78,6 +78,7 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS applications (
       id INT PRIMARY KEY AUTO_INCREMENT,
       video_id INT NOT NULL,
+      video_creator_id INT NOT NULL,
       editor_id INT NOT NULL,
       message TEXT,
       status ENUM('pending','accepted','rejected') DEFAULT 'pending',
@@ -278,18 +279,22 @@ app.put("/api/video_requests/:id/favorite", authMiddleware, async (req, res) => 
     res.json({ success: true, favorite });
   } catch (err) {
     console.error("Erreur mise à jour favori :", err);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
 
   console.log("Mise à jour favori :", id, favorite);
-
+  }
 });
+
 
 
 app.delete("/api/video_requests/:id", authMiddleware, async (req, res) => {
   const { id } = req.params;
 
+
   try {
+    await query(
+      "DELETE FROM applications WHERE video_id = ? AND video_creator_id = ?",
+      [id, req.user.id]
+    );
     await query(
       "DELETE FROM video_requests WHERE id = ? AND creator_id = ?",
       [id, req.user.id]
@@ -418,31 +423,66 @@ app.get("/api/publicVideos", async (req, res) => {
 
 // ------------------- ROUTES APPLICATION -------------------
 
+// Vérifier si l’éditeur a déjà postulé à une vidéo ou pas
+
+app.get("/api/applications/:videoId", authMiddleware, async (req, res) => {
+  const video_id = req.params.videoId;
+  const editor_id = req.user.id;
+
+  try {
+    const existingApps = await query(
+      "SELECT * FROM applications WHERE video_id = ? AND editor_id = ?",
+      [video_id, editor_id]
+    );
+
+    if (existingApps.length > 0) {
+      return res.json({ result: "exists", application: existingApps[0] });
+    } else {
+      return res.json({ result: "none" });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+
 // Candidate à un souhait
 app.post("/api/applications", authMiddleware, async (req, res) => {
-
-  const video_id = req.body.video_id;
-  const message = req.body.message;
-
+  const { video_id, message } = req.body;
   const editor_id = req.user.id;
   const created_at = new Date();
   const status = "pending";
 
+  if (!message) return res.status(400).json({ error: "Message manquant" });
+  if (!video_id) return res.status(400).json({ error: "ID vidéo manquant" });
+  if (!editor_id) return res.status(400).json({ error: "ID éditeur manquant" });
+
   try {
-    const result = await query(
-      "INSERT INTO applications (video_id, editor_id, message, created_at, status) VALUES (?,?,?,?,?)",
-      [video_id, editor_id, message, created_at, status]
+    const existingApps = await query(
+      "SELECT * FROM applications WHERE video_id = ? AND editor_id = ?",
+      [video_id, editor_id]
     );
 
-    const created = await query("SELECT * FROM applications WHERE id = ?", [result.insertId]);
-    console.log("Candidature créée :", created[0]);
-    
-    res.json(created[0]);
+    if (existingApps.length > 0) {
+      return res.status(400).json({ error: "Vous avez déjà postulé à cette vidéo" });
+    }
+
+
+
+    else {
+      const result = await query(
+        "INSERT INTO applications (video_id, editor_id, message, created_at, status) VALUES (?,?,?,?,?)",
+        [video_id, editor_id, message, created_at, status]
+      );
+    }
+
   } catch (err) {
-    console.error("Erreur candidature :", err);
+    console.error(err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
+
 
 // Récupération d’une vidéo publique par username + videoId quand on clique sur une vidéo dans le forum
 
