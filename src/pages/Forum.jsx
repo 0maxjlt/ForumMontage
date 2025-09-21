@@ -18,26 +18,28 @@ import MyAppBar from "../components/ForumComponents/MyAppBar";
 function Forum() {
   const [videos, setVideos] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPrice, setSelectedPrice] = useState([0, 100]);
+  const [selectedPrice, setSelectedPrice] = useState([0, 500]);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
+  const [order, setOrder] = useState("DESC");
+  const [filter, setFilter] = useState("created_at");
 
   const navigate = useNavigate();
 
-  const items = [
-    "620 - Montage",
-    "132 - Motion Design",
-    "Autre",
-    "Autre 2",
-    "Autre 3",
-    "Autre 4",
-    "Autre 5",
-    "Autre 6",
-    "Autre 7",
-    "Autre 8",
-    "Autre 9",
-    "Autre 10",
-  ];
+
+  const videotags = videos.map((video) => video.tags);
+  console.log("Items disponibles :", videotags);
+
+  const allItems = videotags.flat();
+  console.log("Liste unique :", allItems);
+
+  const items = allItems.reduce((acc, tag) => {
+    acc[tag] = (acc[tag] || 0) + 1; // si tag existe déjà, on incrémente, sinon on met 1
+    return acc;
+  }, {});
+
+  console.log("Items comptés :", items);
+
 
   useEffect(() => {
     fetch("http://localhost:3001/api/publicVideos")
@@ -51,25 +53,40 @@ function Forum() {
     console.log("Vidéos chargées :", videos);
   }, [videos]);
 
-  // Filtrage local des vidéos
-  const filteredVideos = videos.filter((video) => {
-    const matchesSearch =
-      video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      video.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      video.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      video.tags.some((tag) =>
-        tag.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  const fetchVideos = async (filter, order, searchTerm, selectedPrice, selectedItems) => {
+    console.log("fetchVideos appelé avec :", { filter, order, searchTerm, selectedPrice, selectedItems });
+    try {
+      const url = new URL("http://localhost:3001/api/publicVideos");
+      url.searchParams.append("sortBy", filter);
+      url.searchParams.append("order", order);
+      url.searchParams.append("title", searchTerm || "");
+      url.searchParams.append("price_min", selectedPrice[0] ?? 0);
+      url.searchParams.append("price_max", selectedPrice[1] ?? 999999);
+      url.searchParams.append("tags", selectedItems || []);
 
-    const matchesStatus =
-      selectedStatus === "" || video.status === selectedStatus;
+      const res = await fetch(url, { method: "GET", credentials: "include" });
 
-    const matchesPrice =
-      !selectedPrice ||
-      (video.price_max >= selectedPrice[0] && video.price_min <= selectedPrice[1]);
+      if (!res.ok) {
+        throw new Error("Erreur lors de la récupération des vidéos");
+      }
 
-    return matchesSearch && matchesStatus && matchesPrice;
-  });
+      const data = await res.json();
+      setVideos(data);
+    } catch (err) {
+      console.error("Erreur fetch :", err);
+    }
+  };
+
+  // Se relance quand un filtre change
+  useEffect(() => {
+    console.log("Filtre :", filter);
+    console.log("Ordre :", order);
+    console.log("Titre :", searchTerm);
+    console.log("Prix entre :", selectedPrice[0], "-", selectedPrice[1]);
+    console.log("Items sélectionnés :", selectedItems);
+    fetchVideos(filter, order, searchTerm, selectedPrice, selectedItems);
+  }, [filter, order, searchTerm, selectedPrice, selectedItems]);
+
 
   return (
     <>
@@ -91,6 +108,10 @@ function Forum() {
         items={items}
         selectedItems={selectedItems}
         setSelectedItems={setSelectedItems}
+        setFilter={setFilter}
+        setOrder={setOrder}
+        order={order}
+        filter={filter}
       />
 
 
@@ -100,7 +121,7 @@ function Forum() {
         justifyContent="center"
         gap={4} // espace horizontal et vertical entre les cards
       >
-        {filteredVideos.map((video) => (
+        {videos.map((video) => (
           <Box
             key={video.id}
             onClick={() => navigate(`/video/${video.username}/${video.video_id}`)}
@@ -145,7 +166,7 @@ function Forum() {
                 <Box display="flex" flexDirection="column" >
                   <Tooltip title={video.title}>
                     <Typography
-                      
+
                       variant="h6"
                       fontWeight="400"
                       noWrap
@@ -161,21 +182,21 @@ function Forum() {
                     </Typography>
                   </Tooltip>
                   <Tooltip title={video.description}>
-                  <Typography
-                
-                    variant="body2"
-                    color="gray"
-                    align="left"
-                    sx={{
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      maxWidth: "100%", // pareil ici
- 
-                    }}
-                  >
-                    {video.description}
-                  </Typography>
+                    <Typography
+
+                      variant="body2"
+                      color="gray"
+                      align="left"
+                      sx={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        maxWidth: "100%", // pareil ici
+
+                      }}
+                    >
+                      {video.description}
+                    </Typography>
                   </Tooltip>
                 </Box>
 

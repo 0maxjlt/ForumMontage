@@ -72,17 +72,17 @@ async function initDb() {
       thumbnail VARCHAR(255),
       FOREIGN KEY (creator_id) REFERENCES users(id)
     );
-  `); 
+  `);
 
   await query(`
     CREATE TABLE IF NOT EXISTS applications (
       id INT PRIMARY KEY AUTO_INCREMENT,
-      request_id INT NOT NULL,
+      video_id INT NOT NULL,
       editor_id INT NOT NULL,
       message TEXT,
       status ENUM('pending','accepted','rejected') DEFAULT 'pending',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (request_id) REFERENCES video_requests(id),
+      FOREIGN KEY (video_id) REFERENCES video_requests(id),
       FOREIGN KEY (editor_id) REFERENCES users(id)
     );
   `);
@@ -350,8 +350,32 @@ app.get("/api/video_requests/:vid", authMiddleware, async (req, res) => {
 
 // Récupération des vidéos publiques (forum)
 app.get("/api/publicVideos", async (req, res) => {
+  let {
+    sortBy = "created_at",
+    order = "DESC",
+    title = "",
+    price_min = 0,
+    price_max = 999999,
+    tags = ""
+  } = req.query;
+
   try {
-    const videos = await query(`
+    if (price_max === '500') price_max = '999999';
+
+    // On transforme la liste de tags en tableau et on enlève les "(nombre)" à la fin
+    const tagsArray = tags
+      ? tags.split(",").map(tag => tag.replace(/\s*\(\d+\)$/, ""))
+      : [];
+
+    // Construction dynamique de la condition tags avec LIKE
+    let tagsQuery = "";
+    let tagsParams = [];
+    if (tagsArray.length > 0) {
+      tagsQuery = tagsArray.map(_ => "video_requests.tags LIKE ?").join(" OR ");
+      tagsParams = tagsArray.map(tag => `%${tag}%`);
+    }
+
+    const queryString = `
       SELECT 
         video_requests.id AS video_id,
         video_requests.title,
@@ -367,16 +391,20 @@ app.get("/api/publicVideos", async (req, res) => {
       FROM video_requests
       JOIN users ON video_requests.creator_id = users.id
       WHERE video_requests.status = 'open'
-      ORDER BY video_requests.created_at DESC
-    `);
+        AND video_requests.title LIKE ?
+        AND video_requests.price_min >= ?
+        AND video_requests.price_max <= ?
+        ${tagsQuery ? "AND (" + tagsQuery + ")" : ""}
+      ORDER BY video_requests.${sortBy} ${order}
+    `;
 
-    // Ici on parse les tags
+    const videos = await query(queryString, [`%${title}%`, price_min, price_max, ...tagsParams]);
+
     const parsedVideos = videos.map(video => ({
       ...video,
-      tags: video.tags ? JSON.parse(video.tags) : [] // si null → tableau vide
+      tags: video.tags ? JSON.parse(video.tags) : []
     }));
 
-    console.log("Vidéos publiques récupérées :", parsedVideos);
     res.json(parsedVideos);
   } catch (err) {
     console.error("Erreur récupération vidéos publiques :", err);
@@ -386,18 +414,30 @@ app.get("/api/publicVideos", async (req, res) => {
 
 
 
+
+
 // ------------------- ROUTES APPLICATION -------------------
 
 // Candidate à un souhait
-app.post("/api/applications", async (req, res) => {
-  const { request_id, editor_id, message } = req.body;
+app.post("/api/applications", authMiddleware, async (req, res) => {
+
+  const video_id = req.body.video_id;
+  const message = req.body.message;
+
+  const editor_id = req.user.id;
+  const created_at = new Date();
+  const status = "pending";
 
   try {
     const result = await query(
-      "INSERT INTO applications (request_id, editor_id, message) VALUES (?,?,?)",
-      [request_id, editor_id, message]
+      "INSERT INTO applications (video_id, editor_id, message, created_at, status) VALUES (?,?,?,?,?)",
+      [video_id, editor_id, message, created_at, status]
     );
-    res.json({ id: result.insertId, request_id, editor_id, message });
+
+    const created = await query("SELECT * FROM applications WHERE id = ?", [result.insertId]);
+    console.log("Candidature créée :", created[0]);
+    
+    res.json(created[0]);
   } catch (err) {
     console.error("Erreur candidature :", err);
     res.status(500).json({ error: "Erreur serveur" });

@@ -23,6 +23,8 @@ const VideoAppli = () => {
     const [video, setVideo] = useState(null);
     const [loading, setLoading] = useState(true);
 
+
+
     const { setMessage } = React.useContext(MessageContext);
     const { username, videoId } = useParams();
     const navigate = useNavigate();
@@ -50,7 +52,31 @@ const VideoAppli = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        setSubmitted(true);
+        
+
+        
+
+        fetch(`http://localhost:3001/api/applications`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                video_id: videoId,
+                message: motivation,
+            }),
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error(`Erreur lors de l'envoi de la candidature (status ${res.status})`);
+                setMessage({ text: 'Candidature envoyée avec succès !', target: 'home' });
+                setSubmitted(true);
+                console.log("Candidature envoyée :", { video_id: videoId, motivation });
+                navigate('/');
+            })
+            .catch((err) => {
+                setMessage({ text: err.message || "Erreur lors de l'envoi de la candidature.", target: 'video' });
+                setSubmitted(false);
+            });
+
     };
 
     return (
