@@ -7,6 +7,8 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 
 const app = express();
 const PORT = 3001;
@@ -18,6 +20,10 @@ app.use(cors({
   origin: "http://localhost:5173",
   credentials: true
 }));
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ------------------- CONFIG BDD MariaDB -------------------
 const pool = mariadb.createPool({
@@ -280,15 +286,58 @@ app.put("/api/video_requests/:id/favorite", authMiddleware, async (req, res) => 
   } catch (err) {
     console.error("Erreur mise à jour favori :", err);
 
-  console.log("Mise à jour favori :", id, favorite);
+    console.log("Mise à jour favori :", id, favorite);
   }
 });
-
 
 
 app.delete("/api/video_requests/:id", authMiddleware, async (req, res) => {
   const { id } = req.params;
 
+
+  try {
+    await query(
+      "DELETE FROM applications WHERE video_id = ? AND video_creator_id = ?",
+      [id, req.user.id]
+    );
+    await query(
+      "DELETE FROM video_requests WHERE id = ? AND creator_id = ?",
+      [id, req.user.id]
+    );
+    res.json({ success: true });
+    console.log("Vidéo supprimée :", id);
+  } catch (err) {
+    console.error("Erreur suppression vidéo :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.delete("/api/video_requests/:id", authMiddleware, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const minia = await query("SELECT thumbnail FROM video_requests WHERE id = ? AND creator_id = ?", [id, req.user.id]);
+
+    console.log("Vidéo à supprimer :", minia[0].thumbnail);
+
+    if (minia.length === 0) {
+      return res.status(404).json({ error: "Vidéo non trouvée ou accès refusé" });
+    }
+
+
+    const fileName = path.basename(minia[0].thumbnail);
+    const filePath = path.join(__dirname, "..", "uploads", fileName);
+
+    console.log("Chemin du fichier à supprimer :", filePath);
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log("Fichier supprimé :", minia[0].thumbnail);
+    }
+
+  } catch (err) {
+    return res.status(404).json({ error: "Vidéo non trouvée ou accès refusé" });
+  }
 
   try {
     await query(
@@ -435,7 +484,12 @@ app.get("/api/applications/:videoId", authMiddleware, async (req, res) => {
       [video_id, editor_id]
     );
 
+    if (editor_id === existingApps[0]?.video_creator_id) {
+      return res.json({ result: "creator" });
+    }
+
     if (existingApps.length > 0) {
+      console.log("Candidature existante :", existingApps[0]);
       return res.json({ result: "exists", application: existingApps[0] });
     } else {
       return res.json({ result: "none" });
@@ -454,9 +508,11 @@ app.post("/api/applications", authMiddleware, async (req, res) => {
   const created_at = new Date();
   const status = "pending";
 
+
   if (!message) return res.status(400).json({ error: "Message manquant" });
   if (!video_id) return res.status(400).json({ error: "ID vidéo manquant" });
   if (!editor_id) return res.status(400).json({ error: "ID éditeur manquant" });
+
 
   try {
     const existingApps = await query(
@@ -471,10 +527,21 @@ app.post("/api/applications", authMiddleware, async (req, res) => {
 
 
     else {
+
+      const video = await query("SELECT creator_id FROM video_requests WHERE id = ?", [video_id]);
+      if (video.length === 0) return res.status(404).json({ error: "Vidéo non trouvée" });
+      const video_creator_id = video[0].creator_id;
+
+
       const result = await query(
-        "INSERT INTO applications (video_id, editor_id, message, created_at, status) VALUES (?,?,?,?,?)",
-        [video_id, editor_id, message, created_at, status]
+        "INSERT INTO applications (video_creator_id, video_id, editor_id, message, created_at, status) VALUES (?,?,?,?,?,?)",
+        [video_creator_id, video_id, editor_id, message, created_at, status]
       );
+
+      const newApp = await query("SELECT * FROM applications WHERE id = ?", [result.insertId]);
+      res.json(newApp[0]);
+      console.log("Nouvelle candidature :", newApp[0]);
+
     }
 
   } catch (err) {
@@ -483,6 +550,37 @@ app.post("/api/applications", authMiddleware, async (req, res) => {
   }
 });
 
+// Modification du message de candidature
+
+app.put("/api/applications/", authMiddleware, async (req, res) => {
+
+  const { applicationId, message } = req.body;
+
+  console.log("Données reçues pour modification :", { applicationId, message });
+
+  const editor_id = req.user.id;
+
+  if (!applicationId || !message) {
+    return res.status(400).json({ error: "ID candidature ou message manquant" });
+  }
+
+  try {
+    const result = await query(
+      "UPDATE applications SET message = ? WHERE id = ? AND editor_id = ?",
+      [message, applicationId, editor_id]
+    );
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: "Candidature non trouvée" });
+    }
+
+    res.json({ message: "Candidature modifiée avec succès" });
+    console.log("Candidature modifiée :", applicationId);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
 
 // Récupération d’une vidéo publique par username + videoId quand on clique sur une vidéo dans le forum
 

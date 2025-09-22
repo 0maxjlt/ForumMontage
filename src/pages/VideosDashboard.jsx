@@ -91,7 +91,8 @@
           setVideo(videoData);
           setFormData(videoData);
 
-          const hasVisited = Cookies.get("hasVisited");
+
+          const hasVisited = Cookies.get(`hasVisited_${id}`);
           console.log("hasVisited cookie:", hasVisited);
 
           if (!hasVisited) {
@@ -223,7 +224,7 @@
 
     const handleLast = () => {
       setActiveStep(0);
-      Cookies.set("hasVisited", "true", { expires: 7 });
+      Cookies.set(`hasVisited_${id}`, "true", { expires: 7 });
       setFirstTime(false);
       handleSave();
     };

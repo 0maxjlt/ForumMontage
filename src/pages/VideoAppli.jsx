@@ -11,7 +11,8 @@ import {
     CircularProgress,
     Avatar,
     Divider,
-    Tooltip
+    Tooltip,
+    CardHeader
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MessageContext } from "../components/Context";
@@ -23,12 +24,34 @@ const VideoAppli = () => {
     const [submitted, setSubmitted] = useState(false);
     const [video, setVideo] = useState(null);
     const [loading, setLoading] = useState(true);
-
-
+    const [cantSubmit, setCantSubmit] = useState(false);
+    const [onEditMotivation, setOnEditMotivation] = useState(false);
+    const [applicationId, setApplicationId] = useState(null);
+    const [user, setUser] = useState(null);
+    const [created_at, setCreated_at] = useState(null);
 
     const { setMessage } = React.useContext(MessageContext);
     const { username, videoId } = useParams();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        fetch(`http://localhost:3001/api/me`, {
+            method: 'GET',
+            credentials: 'include',
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error(`Erreur lors de la récupération des informations utilisateur (status ${res.status})`);
+                return res.json();
+            })
+            .then((data) => {
+                // Traitez les données utilisateur ici si nécessaire
+                setUser(data);
+                console.log("Utilisateur connecté :", data);
+            })
+            .catch((err) => {
+                console.error(err);
+            });
+    }, []);
 
     useEffect(() => {
         const fetchVideo = async () => {
@@ -62,10 +85,17 @@ const VideoAppli = () => {
                 return res.json();
             })
             .then((data) => {
+
+                if (data.result === 'creator') {
+                    setCantSubmit(true);
+                }
+
                 if (data.result === 'exists') {
                     console.log(data.created);
                     setMotivation(data.application.message);
                     setSubmitted(true);
+                    setApplicationId(data.application.id);
+                    setCreated_at(data.application.created_at);
                 }
             })
             .catch((err) => {
@@ -88,10 +118,13 @@ const VideoAppli = () => {
         })
             .then((res) => {
                 if (!res.ok) throw new Error(`Erreur lors de l'envoi de la candidature (status ${res.status})`);
-                
+
                 setSubmitted(true);
                 console.log("Candidature envoyée :", { video_id: videoId, motivation });
-                
+
+            })
+            .then((data) => {
+                console.log("Candidature créée :", data);
             })
             .catch((err) => {
                 setMessage({ text: err.message || "Erreur lors de l'envoi de la candidature.", target: 'video' });
@@ -100,10 +133,46 @@ const VideoAppli = () => {
 
     };
 
+    const handleChangeMotivation = () => {
+        setOnEditMotivation(true);
+        setSubmitted(false);
+    };
+
+    const handleEditSubmit = (e) => {
+        e.preventDefault();
+        setOnEditMotivation(false);
+
+        fetch(`http://localhost:3001/api/applications`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+
+                applicationId: applicationId,
+                message: motivation,
+            }),
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error(`Erreur lors de la modification de la candidature (status ${res.status})`);
+
+                setSubmitted(true);
+                console.log("Candidature modifiée :", { video_id: videoId, motivation });
+
+            })
+            .then((data) => {
+                console.log("Candidature modifiée :", data);
+            })
+            .catch((err) => {
+                setMessage({ text: err.message || "Erreur lors de la modification de la candidature.", target: 'video' });
+                setSubmitted(false);
+
+            });
+
+    };
+
     return (
         <Box
             sx={{
-                display: 'flex',
                 minHeight: '100vh',
                 color: '#fff',
                 p: { xs: 2, md: 6 },
@@ -125,6 +194,9 @@ const VideoAppli = () => {
                         borderRadius: 3,
                         overflow: 'hidden',
                         bgcolor: '#050505ff',
+                        borderColor: "#2d2d2d",
+                        borderWidth: 1,
+                        borderStyle: "solid",
 
                     }}
                 >
@@ -153,15 +225,15 @@ const VideoAppli = () => {
                             </Avatar>
                             <Box
                                 display="flex"
-                                flexDirection="row"
-                                justifyContent="space-between"
+                                flexDirection="column"
+                                alignItems="flex-start"
                                 width="100%"
                             >
-                                <Typography fontWeight={500} variant="body1" noWrap>
+                                <Typography fontWeight={500} variant="body1" noWrap >
                                     {video.creator_name}
                                 </Typography>
                                 <Typography variant="caption" color="gray">
-                                    {video.video_created_at?.split("T")[0]}
+                                    {video.created_at?.split("T")[0]}
                                 </Typography>
                             </Box>
                         </Box>
@@ -188,23 +260,24 @@ const VideoAppli = () => {
                                 </Typography>
                             </Tooltip>
 
-                            <Tooltip title={video.description}>
-                                <Typography
-                                    variant="body2"
-                                    color="gray"
-                                    align="left"
-                                    sx={{
-                                        whiteSpace: 'pre-line',
-                                        overflowWrap: 'anywhere',
-                                        wordBreak: 'break-word',
-                                        hyphens: 'auto',
-                                        width: '100%',
-                                        minWidth: 0,
-                                    }}
-                                >
-                                    {video.description}
-                                </Typography>
-                            </Tooltip>
+
+                            <Typography
+                                variant="body1"
+                                color="gray"
+                                align="left"
+                                sx={{
+                                    whiteSpace: 'pre-line',
+                                    overflowWrap: 'anywhere',
+                                    wordBreak: 'break-word',
+                                    hyphens: 'auto',
+                                    width: '100%',
+                                    minWidth: 0,
+                                    pt: 1,
+                                }}
+                            >
+                                {video.description}
+                            </Typography>
+
                         </Box>
                         <Divider sx={{ bgcolor: "#2d2d2d", my: 2 }} />
 
@@ -215,13 +288,13 @@ const VideoAppli = () => {
                             justifyContent="space-between"
                         >
                             <Stack display="flex" flexDirection="column">
-                                <Typography display="flex" variant="body2">
+                                <Typography display="flex" variant="body1">
                                     Durée estimée:&nbsp;
                                     <span style={{ color: "#58a6ff" }}>
                                         {video.estimated_video_duration || 0} min
                                     </span>
                                 </Typography>
-                                <Typography display="flex" variant="body2">
+                                <Typography display="flex" variant="body1">
                                     Durée rushs:&nbsp;
                                     <span style={{ color: "#58a6ff" }}>
                                         {video.estimated_rushes_duration || 0} min
@@ -229,7 +302,7 @@ const VideoAppli = () => {
                                 </Typography>
                             </Stack>
 
-                            <Typography display="flex" variant="body2">
+                            <Typography display="flex" variant="body1">
                                 Prix estimé:&nbsp;
                                 <span style={{ color: "#58a6ff" }}>
                                     {video.price_min || 0} - {video.price_max || 0} €
@@ -274,17 +347,88 @@ const VideoAppli = () => {
                 </Card>
             )}
 
+            <Divider sx={{ width: '100%', maxWidth: 300, my: 4, bgcolor: "#3c4438ff" }} />
 
-            {submitted && !loading && video && (
+            {cantSubmit && !loading && video && (
                 <Stack>
-                    <Typography variant="body2" color="gray">
-                        {motivation}
+                    <Typography variant="h6" color="gray" mb={2}>
+                        Vous ne pouvez pas postuler à votre propre vidéo.
                     </Typography>
                 </Stack>
             )}
 
+            {!cantSubmit && submitted && !loading && video && (
+                <>
+                    <Stack alignItems="flex-start" width="100%" maxWidth={720} >
+                        <Typography variant="h6" fontWeight="300" >
+                            Message envoyé :
+                        </Typography>
+                    </Stack>
+
+                    <Stack width="100%" p={1} spacing={3} alignItems="center">
+
+
+                        <Card
+                            sx={{
+                                width: '100%',
+                                maxWidth: 720,
+                                borderRadius: 2,
+                                bgcolor: '#050505ff',
+                                borderColor: "#2d2d2d",
+                                borderWidth: 1,
+                                borderStyle: "solid",
+                            }}
+                        >
+                            <CardHeader align="left" sx={{ pb: 1 }}
+                                avatar={<Avatar sx={{ bgcolor: "#89CE94" }}><PersonIcon /></Avatar>}
+                                title={user.username || "Utilisateur"}
+                                subheader={created_at?.split("T")[0]}
+
+                                titleTypographyProps={{
+                                    fontSize: "1rem", // augmente la taille du titre
+                                    fontWeight: 500,
+                                }}
+                                subheaderTypographyProps={{
+                                    fontSize: "0.9rem", // optionnel : réduit ou ajuste le subheader
+                                    color: "text.secondary",
+                                }}
+                            />
+
+                            <Typography
+                                variant="body1"
+                                sx={{
+                                    textAlign: "left",
+                                    lineHeight: 1.7,
+                                    color: "text.primary",
+                                    whiteSpace: "pre-line",
+                                    pl: 3,
+                                    pr: 3,
+                                    pt: 0,
+                                    pb: 2,
+                                    ml: 6,
+                                }}
+                            >
+                                {motivation}
+                            </Typography>
+                        </Card>
+
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleChangeMotivation}
+                            sx={{ borderRadius: 2, px: 3 }}
+                        >
+                            Modifier mon message
+                        </Button>
+
+                    </Stack>
+                </>
+            )}
+
+
+
             {/* Formulaire de candidature */}
-            {!submitted && !loading && video && (
+            {!cantSubmit && !submitted && !loading && video && (
                 <Card
                     sx={{
                         width: '100%',
@@ -304,7 +448,7 @@ const VideoAppli = () => {
                         </Stack>
 
                     ) : (
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={onEditMotivation ? handleEditSubmit : handleSubmit}>
                             <Stack spacing={3}>
                                 <TextField
                                     label="Message"
@@ -338,14 +482,14 @@ const VideoAppli = () => {
                                         transition: 'all 0.2s ease-in-out',
                                     }}
                                 >
-                                    Envoyer la candidature
+                                    {onEditMotivation ? 'Sauvegarder' : 'Envoyer la candidature'}
                                 </Button>
                             </Stack>
                         </form>
                     )}
                 </Card>
             )}
-        </Box>
+        </Box >
     );
 };
 
