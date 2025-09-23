@@ -10,6 +10,13 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
+import WebSocketServer from "ws";
+
+
+import { pool, query, initDb } from "./db.js";
+import { initSocketServer } from "./socketServer.js";
+
+
 const app = express();
 const PORT = 3001;
 
@@ -25,77 +32,20 @@ app.use(cors({
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ------------------- CONFIG BDD MariaDB -------------------
-const pool = mariadb.createPool({
-  host: "localhost",
-  user: "root",
-  password: "azerty",
-  database: "forumdb",
-  connectionLimit: 5,
-  port: 3306,
+
+
+// ------------------- VARIABLES -------------------
+const SECRET = "unSuperSecretUltraSolide";
+
+
+
+const server = app.listen(PORT, () => {
+  console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
 
+initSocketServer(server, SECRET);
 
-async function query(sql, params = []) {
-  let conn;
-  try {
-    conn = await pool.getConnection();
-    const res = await conn.query(sql, params);
-    return res;
-  } finally {
-    if (conn) conn.release();
-  }
-}
 
-// Création des tables si elles n’existent pas
-async function initDb() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INT PRIMARY KEY AUTO_INCREMENT,
-      username VARCHAR(255) NOT NULL UNIQUE,
-      email VARCHAR(255) NOT NULL UNIQUE,
-      password VARCHAR(255) NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS video_requests (
-      id INT PRIMARY KEY AUTO_INCREMENT,
-      title VARCHAR(255) NOT NULL,
-      description TEXT NOT NULL,
-      script TEXT,
-      status ENUM('open','in_progress','closed') DEFAULT 'closed',
-      tags TEXT,
-      estimated_video_duration VARCHAR(50),
-      estimated_rushes_duration VARCHAR(50),
-      price_min INT,
-      price_max INT,
-      frequence VARCHAR(50),
-      creator_id INT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      favorite BOOLEAN,
-      thumbnail VARCHAR(255),
-      FOREIGN KEY (creator_id) REFERENCES users(id)
-    );
-  `);
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS applications (
-      id INT PRIMARY KEY AUTO_INCREMENT,
-      video_id INT NOT NULL,
-      video_creator_id INT NOT NULL,
-      editor_id INT NOT NULL,
-      message TEXT,
-      status ENUM('pending','accepted','rejected') DEFAULT 'pending',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (video_id) REFERENCES video_requests(id),
-      FOREIGN KEY (editor_id) REFERENCES users(id)
-    );
-  `);
-}
-
-initDb().catch(err => console.error("Erreur initialisation BDD :", err));
 
 
 // ------------------- CONFIG MULTER (upload fichiers) -------------------
@@ -130,8 +80,6 @@ app.post("/api/upload/thumbnail", authMiddleware, upload.single("thumbnail"), (r
 app.use("/uploads", express.static("uploads"));
 
 
-// ------------------- VARIABLES -------------------
-const SECRET = "unSuperSecretUltraSolide";
 
 // ------------------- MIDDLEWARE -------------------
 async function authMiddleware(req, res, next) {
@@ -199,6 +147,7 @@ app.post("/api/register", async (req, res) => {
 app.get("/api/me", authMiddleware, async (req, res) => {
   const users = await query("SELECT id, username, email FROM users WHERE id = ?", [req.user.id]);
   res.json(users[0]);
+  console.log("Profil utilisateur :", users[0]);
 });
 
 // ------------------- ROUTES VIDEO -------------------
@@ -479,25 +428,56 @@ app.get("/api/applications/:videoId", authMiddleware, async (req, res) => {
   const editor_id = req.user.id;
 
   try {
-    const existingApps = await query(
-      "SELECT * FROM applications WHERE video_id = ? AND editor_id = ?",
-      [video_id, editor_id]
+    const videos = await query(
+      "SELECT creator_id FROM video_requests WHERE id = ?",
+      [video_id]
     );
 
-    if (editor_id === existingApps[0]?.video_creator_id) {
-      return res.json({ result: "creator" });
+    if (videos.length === 0) {
+      return res.status(404).json({ error: "Vidéo non trouvée" });
     }
 
-    if (existingApps.length > 0) {
-      console.log("Candidature existante :", existingApps[0]);
-      return res.json({ result: "exists", application: existingApps[0] });
-    } else {
-      return res.json({ result: "none" });
+    const video_creator_id = videos[0].creator_id;
+
+    const applications = await query(
+      "SELECT * FROM applications WHERE video_id = ? AND editor_id = 2",
+      [video_id] // 2 = editor_id 
+    );
+
+    // CA NE FONCTIONNE PAS CAR LE CREATOR N EST PAS L EDITOR ET N A PAS D APPLICATION SUR SA VIDEO DONC PAS POSSIBLE DE FAIRE COMME CA
+    // nan tu t'es trompé
+
+    // FAIRE UNE LISTE DES APPLICATIONS SUR LA VIDEO ET CLIQUER SUR UNE APPLICATION POUR VOIR LES MESSAGES
+
+    // SI LE USER EST LE CREATOR DE LA VIDEO IL PEUT VOIR TOUTES LES APPLICATIONS
+
+    // nom variable editor_id = req.user.id;   :-/
+
+      console.log("Vérification candidature  x :", { video_id, editor_id, video_creator_id, applications });
+
+    if (video_creator_id === editor_id) {
+      // L’utilisateur est le créateur
+      if (applications.length > 0) {
+        return res.json({ result: "creator", application: applications[0] });
+      } else {
+        return res.json({ result: "creator_none", application: applications[0] });
+      }
     }
-  } catch (err) {
-    console.error(err);
+
+    if (applications.length > 0) {
+      // L’utilisateur a déjà postulé
+      return res.json({ result: "exists", application: applications[0] });
+    }
+
+    // L’utilisateur n’a jamais postulé
+    return res.json({ result: "none" });
+  }
+
+  catch (err) {
+    console.error("Erreur vérification candidature :", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
+
 });
 
 
@@ -524,7 +504,9 @@ app.post("/api/applications", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Vous avez déjà postulé à cette vidéo" });
     }
 
-
+    if (editor_id === existingApps[0]?.video_creator_id) {
+      return res.status(400).json({ error: "Vous ne pouvez pas postuler à votre propre vidéo" });
+    }
 
     else {
 
@@ -564,7 +546,18 @@ app.put("/api/applications/", authMiddleware, async (req, res) => {
     return res.status(400).json({ error: "ID candidature ou message manquant" });
   }
 
+
   try {
+
+    const existingApps = await query(
+      "SELECT * FROM applications WHERE id = ? AND editor_id = ?",
+      [applicationId, editor_id]
+    );
+
+    if (editor_id === existingApps[0]?.video_creator_id) {
+      return res.status(400).json({ error: "Vous ne pouvez pas modifier une candidature à votre propre vidéo" });
+    }
+
     const result = await query(
       "UPDATE applications SET message = ? WHERE id = ? AND editor_id = ?",
       [message, applicationId, editor_id]
@@ -628,6 +621,5 @@ app.get("/api/applications/:requestId", authMiddleware, async (req, res) => {
 
 
 // ------------------- LANCEMENT -------------------
-app.listen(PORT, () => {
-  console.log(`Serveur démarré sur http://localhost:${PORT}`);
-});
+
+
