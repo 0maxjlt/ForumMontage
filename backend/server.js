@@ -154,21 +154,21 @@ app.get("/api/me", authMiddleware, async (req, res) => {
 
 // Création d'une vidéo
 app.post("/api/video_requests", authMiddleware, async (req, res) => {
-  const { title, description, script, status,
+  const { title, description, status,
     estimated_video_duration, estimated_rushes_duration,
-    price_min, price_max, frequence, tags, favorite, thumbnail } = req.body;
+    price_min, price_max, tags, favorite, thumbnail } = req.body;
 
   try {
     const result = await query(
       `INSERT INTO video_requests
-       (title, description, script, status,
+       (title, description, status,
         estimated_video_duration, estimated_rushes_duration,
-        price_min, price_max, frequence, tags, creator_id, created_at, favorite, thumbnail)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        price_min, price_max, tags, creator_id, created_at, favorite, thumbnail)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        title, description, script, status,
+        title, description, status,
         estimated_video_duration, estimated_rushes_duration,
-        price_min, price_max, frequence,
+        price_min, price_max,
         tags ? JSON.stringify(tags) : null,
         req.user.id, new Date(), favorite, thumbnail
 
@@ -187,22 +187,22 @@ app.post("/api/video_requests", authMiddleware, async (req, res) => {
 
 // Modification d'une vidéo
 app.put("/api/video_requests/:id", authMiddleware, async (req, res) => {
-  const { title, description, script, status,
+  const { title, description, status,
     estimated_video_duration, estimated_rushes_duration,
-    price_min, price_max, frequence, tags, favorite, thumbnail } = req.body;
+    price_min, price_max, tags, favorite, thumbnail } = req.body;
   const { id } = req.params;
 
   try {
     await query(
       `UPDATE video_requests
-       SET title = ?, description = ?, script = ?, status = ?,
+       SET title = ?, description = ?, status = ?,
            estimated_video_duration = ?, estimated_rushes_duration = ?,
-           price_min = ?, price_max = ?, frequence = ?, tags = ?, favorite = ?, thumbnail = ?
+           price_min = ?, price_max = ?, tags = ?, favorite = ?, thumbnail = ?
        WHERE id = ? AND creator_id = ?`,
       [
-        title, description, script, status,
+        title, description, status,
         estimated_video_duration, estimated_rushes_duration,
-        price_min, price_max, frequence,
+        price_min, price_max,
         tags ? JSON.stringify(tags) : null, favorite, thumbnail,
 
         id, req.user.id
@@ -239,27 +239,6 @@ app.put("/api/video_requests/:id/favorite", authMiddleware, async (req, res) => 
   }
 });
 
-
-app.delete("/api/video_requests/:id", authMiddleware, async (req, res) => {
-  const { id } = req.params;
-
-
-  try {
-    await query(
-      "DELETE FROM applications WHERE video_id = ? AND video_creator_id = ?",
-      [id, req.user.id]
-    );
-    await query(
-      "DELETE FROM video_requests WHERE id = ? AND creator_id = ?",
-      [id, req.user.id]
-    );
-    res.json({ success: true });
-    console.log("Vidéo supprimée :", id);
-  } catch (err) {
-    console.error("Erreur suppression vidéo :", err);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
 
 app.delete("/api/video_requests/:id", authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -425,7 +404,7 @@ app.get("/api/publicVideos", async (req, res) => {
 
 app.get("/api/applications/:videoId", authMiddleware, async (req, res) => {
   const video_id = req.params.videoId;
-  const editor_id = req.user.id;
+  const user_id = req.user.id;
 
   try {
     const videos = await query(
@@ -439,41 +418,25 @@ app.get("/api/applications/:videoId", authMiddleware, async (req, res) => {
 
     const video_creator_id = videos[0].creator_id;
 
-    const applications = await query(
-      "SELECT * FROM applications WHERE video_id = ? AND editor_id = 2",
-      [video_id] // 2 = editor_id 
-    );
-
-    // CA NE FONCTIONNE PAS CAR LE CREATOR N EST PAS L EDITOR ET N A PAS D APPLICATION SUR SA VIDEO DONC PAS POSSIBLE DE FAIRE COMME CA
-    // nan tu t'es trompé
-
-    // FAIRE UNE LISTE DES APPLICATIONS SUR LA VIDEO ET CLIQUER SUR UNE APPLICATION POUR VOIR LES MESSAGES
-
-    // SI LE USER EST LE CREATOR DE LA VIDEO IL PEUT VOIR TOUTES LES APPLICATIONS
-
-    // nom variable editor_id = req.user.id;   :-/
-
-      console.log("Vérification candidature  x :", { video_id, editor_id, video_creator_id, applications });
-
-    if (video_creator_id === editor_id) {
-      // L’utilisateur est le créateur
-      if (applications.length > 0) {
-        return res.json({ result: "creator", application: applications[0] });
-      } else {
-        return res.json({ result: "creator_none", application: applications[0] });
-      }
+    if (video_creator_id === user_id) {
+      return res.json({ result: "creator" });
     }
+
+
+    const applications = await query(
+      "SELECT * FROM applications WHERE video_id = ? AND applicant_id = ?",
+      [video_id, user_id]
+    );
 
     if (applications.length > 0) {
       // L’utilisateur a déjà postulé
       return res.json({ result: "exists", application: applications[0] });
+    } else {
+      // L’utilisateur n’a pas encore postulé
+      return res.json({ result: "not_exists" });
     }
 
-    // L’utilisateur n’a jamais postulé
-    return res.json({ result: "none" });
-  }
-
-  catch (err) {
+  } catch (err) {
     console.error("Erreur vérification candidature :", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
@@ -486,7 +449,7 @@ app.post("/api/applications", authMiddleware, async (req, res) => {
   const { video_id, message } = req.body;
   const editor_id = req.user.id;
   const created_at = new Date();
-  const status = "pending";
+  const statut = "pending";
 
 
   if (!message) return res.status(400).json({ error: "Message manquant" });
@@ -496,7 +459,7 @@ app.post("/api/applications", authMiddleware, async (req, res) => {
 
   try {
     const existingApps = await query(
-      "SELECT * FROM applications WHERE video_id = ? AND editor_id = ?",
+      "SELECT * FROM applications WHERE video_id = ? AND applicant_id = ?",
       [video_id, editor_id]
     );
 
@@ -508,23 +471,17 @@ app.post("/api/applications", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Vous ne pouvez pas postuler à votre propre vidéo" });
     }
 
-    else {
-
-      const video = await query("SELECT creator_id FROM video_requests WHERE id = ?", [video_id]);
-      if (video.length === 0) return res.status(404).json({ error: "Vidéo non trouvée" });
-      const video_creator_id = video[0].creator_id;
 
 
-      const result = await query(
-        "INSERT INTO applications (video_creator_id, video_id, editor_id, message, created_at, status) VALUES (?,?,?,?,?,?)",
-        [video_creator_id, video_id, editor_id, message, created_at, status]
-      );
+    const result = await query(
+      "INSERT INTO applications (video_id, applicant_id, message, created_at, statut) VALUES (?,?,?,?,?)",
+      [video_id, editor_id, message, created_at, statut]
+    );
 
-      const newApp = await query("SELECT * FROM applications WHERE id = ?", [result.insertId]);
-      res.json(newApp[0]);
-      console.log("Nouvelle candidature :", newApp[0]);
+    const newApp = await query("SELECT * FROM applications WHERE id = ? AND applicant_id = ?", [result.insertId, editor_id]);
+    res.json(newApp[0]);
+    console.log("Nouvelle candidature :", newApp[0]);
 
-    }
 
   } catch (err) {
     console.error(err);
@@ -550,7 +507,7 @@ app.put("/api/applications/", authMiddleware, async (req, res) => {
   try {
 
     const existingApps = await query(
-      "SELECT * FROM applications WHERE id = ? AND editor_id = ?",
+      "SELECT * FROM applications WHERE id = ? AND applicant_id = ?",
       [applicationId, editor_id]
     );
 
@@ -559,7 +516,7 @@ app.put("/api/applications/", authMiddleware, async (req, res) => {
     }
 
     const result = await query(
-      "UPDATE applications SET message = ? WHERE id = ? AND editor_id = ?",
+      "UPDATE applications SET message = ? WHERE id = ? AND applicant_id = ?",
       [message, applicationId, editor_id]
     );
 
@@ -605,14 +562,24 @@ app.get("/api/videos/:username/:videoId", authMiddleware, async (req, res) => {
   }
 });
 
-// Voir les candidatures d’un souhait
-app.get("/api/applications/:requestId", authMiddleware, async (req, res) => {
+// Voir toutes les candidatures pour une vidéo 
+app.get("/api/applications_list", authMiddleware, async (req, res) => {
+
+  const creator_id = req.user.id;
+
   try {
-    const apps = await query(
-      "SELECT a.*, u.username AS editor_name FROM applications a JOIN users u ON a.editor_id = u.id WHERE a.request_id = ?",
-      [req.params.requestId]
+    const applications = await query( `
+      SELECT applications.*, applications.video_id AS application_video_id, applications.id AS application_id, users.id AS user_id, users.username 
+      FROM applications 
+      JOIN video_requests ON applications.video_id = video_requests.id 
+      JOIN users ON applications.applicant_id = users.id
+      WHERE video_requests.creator_id = ? AND applications.statut = 'pending' 
+      ORDER BY applications.created_at DESC 
+      `,
+      [creator_id]
     );
-    res.json(apps);
+
+    res.json({ applications });
   } catch (err) {
     console.error("Erreur récupération candidatures :", err);
     res.status(500).json({ error: "Erreur serveur" });

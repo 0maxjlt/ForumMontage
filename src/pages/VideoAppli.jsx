@@ -30,7 +30,7 @@ const VideoAppli = () => {
     const [onEditMotivation, setOnEditMotivation] = useState(false);
 
     const [user, setUser] = useState(null);
-    const [created_at, setCreated_at] = useState(null);
+
 
     const [socket, setSocket] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -107,23 +107,17 @@ const VideoAppli = () => {
                 if (data.result === 'creator') {
                     console.log(data)
                     setCantSubmit(true);
-                    setApplication(data.application);
-                }
-
-                if (data.result === 'creator_none') {
-                    setCantSubmit(true);
-                    setApplication(data.application);
-                    console.log(data);
                 }
 
                 if (data.result === 'exists') {
                     console.log(data.created);
+                    setApplication(data.application);
                     setMotivation(data.application.message);
                     setSubmitted(true);
-                    setApplication(data.application);
+                    
                 }
 
-                if (data.result === 'none') {
+                if (data.result === 'not_exists') {
                     setSubmitted(false);
                     setApplication(null);
                 }
@@ -183,11 +177,12 @@ const VideoAppli = () => {
                 if (!res.ok) throw new Error(`Erreur lors de l'envoi de la candidature (status ${res.status})`);
 
                 setSubmitted(true);
-                console.log("Candidature envoyée :", { video_id: videoId, motivation });
+                return res.json();
 
             })
             .then((data) => {
                 console.log("Candidature créée :", data);
+                setApplication(data);
             })
             .catch((err) => {
                 setMessage({ text: err.message || "Erreur lors de l'envoi de la candidature.", target: 'video' });
@@ -420,7 +415,7 @@ const VideoAppli = () => {
                 </Stack>
             )}
 
-            {!cantSubmit && submitted && !loading && video && (
+            {application &&!cantSubmit && submitted && !loading && video && (
                 <>
                     <Stack alignItems="flex-start" width="100%" maxWidth={720} >
                         <Typography variant="h6" fontWeight="300" >

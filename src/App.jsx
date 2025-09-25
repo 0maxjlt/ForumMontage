@@ -15,7 +15,7 @@ import Dashboard from "./pages/Dashboard";
 import VideosDashboard from "./pages/VideosDashboard";
 import Forum from "./pages/Forum";
 import VideoAppli from "./pages/VideoAppli";
-
+import Discussions from "./pages/Discussions";
 
 
 import Layout from './components/Layout';
@@ -44,6 +44,7 @@ function App() {
                 <Route path="dashboard/:id" element={<VideosDashboard />} />
                 <Route path="forum" element={<Forum />} />
                 <Route path="video/:username/:videoId" element={<VideoAppli />} />
+                <Route path="messagerie" element={<Discussions />} />
               </Route>
             </Routes>
           </Router>

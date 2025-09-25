@@ -20,8 +20,6 @@
     StepLabel,
     StepButton,
     MobileStepper,
-
-
   } from "@mui/material";
   import Slider from "@mui/material/Slider";
 
