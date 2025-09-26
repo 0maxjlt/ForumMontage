@@ -26,9 +26,9 @@ export default function MyAppBar() {
     return (
         <>
             <AppBar sx={{ bgcolor: "#000000ff" }}>
-                <Toolbar>
+                <Toolbar disableGutters>
 
-                    <Stack direction="row" justifyContent="right" spacing={2} sx={{ flexGrow: 1, mr: 2 }}>
+                    <Stack direction="row" justifyContent="right" spacing={2} sx={{ flexGrow: 1}}>
                         {/* Icône notifications */}
                         <IconButton color="inherit">
                             <Badge badgeContent={3} color="error">
@@ -72,7 +72,7 @@ export default function MyAppBar() {
             </Menu>
 
             {/* Décalage pour que le contenu principal ne soit pas sous l'AppBar */}
-            <Toolbar />
+            
         </>
     );
 }

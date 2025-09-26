@@ -20,8 +20,9 @@ function Layout() {
         component="main"
         sx={{
           flexGrow: 1,
-          ml: { sm: `260px` }, // pour laisser la place au drawer sur desktop
+          ml: { sm: '260px', xs: '0' }, // pour laisser la place au drawer sur desktop
           mt: 8, // pour laisser la place à l'appbar
+        
         }}
       >
         {/* En-tête de page 

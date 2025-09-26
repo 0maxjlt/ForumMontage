@@ -56,6 +56,7 @@ export default function MyDrawer() {
                     <Typography variant="h6" sx={{ fontWeight: "bold", color: "#fff" }}>
                         🎬 ForumMontage
                     </Typography>
+                    
                 </Toolbar>
 
                 <Box sx={{ flexGrow: 1, overflow: "auto" }}>
@@ -182,7 +183,7 @@ export default function MyDrawer() {
                     >
                         <MenuIcon />
                     </IconButton>
-                    <Typography variant="h6" sx={{ ml: 2 }}>
+                    <Typography variant="h6" >
                         🎬 ForumMontage
                     </Typography>
                 </Toolbar>
