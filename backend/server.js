@@ -474,8 +474,8 @@ app.post("/api/applications", authMiddleware, async (req, res) => {
 
 
     const result = await query(
-      "INSERT INTO applications (video_id, applicant_id, message, created_at, statut) VALUES (?,?,?,?,?)",
-      [video_id, editor_id, message, created_at, statut]
+      "INSERT INTO applications (video_id, applicant_id, message, created_at, statut, seen_by_creator) VALUES (?,?,?,?,?,?)",
+      [video_id, editor_id, message, created_at, statut, 0]
     );
 
     const newApp = await query("SELECT * FROM applications WHERE id = ? AND applicant_id = ?", [result.insertId, editor_id]);
@@ -562,14 +562,16 @@ app.get("/api/videos/:username/:videoId", authMiddleware, async (req, res) => {
   }
 });
 
-// Voir toutes les candidatures pour une vidéo 
+
+
+// --- MESSAGERIE ---
 app.get("/api/applications_list", authMiddleware, async (req, res) => {
 
   const creator_id = req.user.id;
 
   try {
-    const applications = await query( `
-      SELECT applications.*, applications.video_id AS application_video_id, applications.id AS application_id, users.id AS user_id, users.username 
+    const applications = await query(`
+      SELECT applications.*, applications.video_id AS application_video_id, applications.id AS application_id, users.id AS user_id, users.username
       FROM applications 
       JOIN video_requests ON applications.video_id = video_requests.id 
       JOIN users ON applications.applicant_id = users.id
@@ -585,6 +587,214 @@ app.get("/api/applications_list", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
+
+app.put("/api/applications/:id/seen", authMiddleware, async (req, res) => {
+  const applicationId = req.params.id;
+  const creator_id = req.user.id;
+
+
+  console.log("Marquer comme vue :", applicationId, "par le créateur", creator_id);
+
+  try {
+
+    const creator = await query(`
+      SELECT creator_id
+        FROM video_requests 
+        JOIN applications ON video_requests.id = applications.video_id
+        WHERE applications.id = ?`,
+      [applicationId]
+    );
+
+    console.log("Vérification créateur :", creator);
+    console.log("ID créateur connecté :", creator_id);
+    if (creator.length === 0) {
+      return res.status(404).json({ error: "Candidature non trouvée" });
+    }
+
+    if (creator[0].creator_id !== creator_id) {
+      return res.status(403).json({ error: "Accès refusé" });
+    }
+
+    const result = await query(
+      "UPDATE applications SET seen_by_creator = 1 WHERE id = ?",
+      [applicationId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Candidature non trouvée" });
+    }
+
+    res.json({ message: "Candidature marquée comme vue" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.put("/api/applications/:id/accept", authMiddleware, async (req, res) => {
+  const applicationId = req.params.id;
+  const creator_id = req.user.id;
+
+
+  try {
+    const creator = await query(`
+      SELECT creator_id
+        FROM video_requests 
+       WHERE id = (SELECT video_id FROM applications WHERE id = ?)`,
+      [applicationId]
+    );
+
+    if (creator.length === 0) {
+      return res.status(404).json({ error: "Candidature non trouvée" });
+    }
+
+    if (creator[0].creator_id !== creator_id) {
+      return res.status(403).json({ error: "Accès refusé" });
+    }
+
+    const result = await query(
+      "UPDATE applications SET statut = 'accepted' WHERE id = ?",
+      [applicationId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Candidature non trouvée" });
+    }
+
+    const applicant_id = await query(
+      "SELECT applicant_id FROM applications WHERE id = ?",
+      [applicationId]
+    );
+
+    await query(
+      `INSERT INTO discussions (application_id, editor_id, creator_id)
+       VALUES (?, ?, ?)`,
+      [applicationId, applicant_id[0].applicant_id, creator_id]
+    );
+
+    await query(
+      `INSERT INTO messages (is_creator, discussion_id, content)
+   VALUES (1, (SELECT id FROM discussions WHERE application_id = ? LIMIT 1), ?)`,
+      [applicationId, " d "]
+    );
+
+
+    console.log("Discussion créée pour la candidature :", applicationId, "entre l'éditeur", applicant_id[0].applicant_id, "et le créateur", creator_id);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.put("/api/applications/:id/reject", authMiddleware, async (req, res) => {
+  const applicationId = req.params.id;
+  const creator_id = req.user.id;
+  try {
+    const creator = await query(`
+      SELECT creator_id
+        FROM video_requests
+       WHERE id = (SELECT video_id FROM applications WHERE id = ?)`,
+      [applicationId]
+    );
+
+    if (creator.length === 0) {
+      return res.status(404).json({ error: "Candidature non trouvée" });
+    }
+
+    if (creator[0].creator_id !== creator_id) {
+      return res.status(403).json({ error: "Accès refusé" });
+    }
+
+    const result = await query(
+      "UPDATE applications SET statut = 'rejected' WHERE id = ?",
+      [applicationId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Candidature non trouvée" });
+    }
+
+    res.json({ message: "Candidature refusée" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+
+app.get("/api/discussions_list", authMiddleware, async (req, res) => {
+
+  const userId = req.user.id;
+
+  console.log("Récupérer les discussions pour l'utilisateur :", userId);
+
+  try {
+    const discussions = await query(`
+      SELECT d.id AS discussion_id,
+             d.application_id,
+             d.editor_id,
+             d.creator_id,
+             m.content AS last_message,
+             m.created_at AS last_message_date,
+             u.username AS other_username
+      FROM discussions d
+      JOIN messages m ON d.id = m.discussion_id
+      JOIN users u ON u.id = (
+          CASE 
+            WHEN d.editor_id = ? THEN d.creator_id 
+            ELSE d.editor_id 
+          END
+      )
+      WHERE m.id IN (
+        SELECT MAX(id)
+        FROM messages
+        WHERE discussion_id = d.id
+      )
+    `, [userId, userId]);
+
+
+    console.log("Discussions récupérées :", discussions);
+    if (discussions.length === 0) {
+      return res.status(404).json({ error: "Aucune discussion trouvée" });
+    }
+
+    res.json({ discussions });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.get("/api/discussions/:discussionId", authMiddleware, async (req, res) => {
+  const { discussionId } = req.params;
+  const userId = req.user.id;
+
+  console.log("Récupérer la discussion :", discussionId, "pour l'utilisateur :", userId);
+
+  try {
+    const messages = await query(`
+      SELECT discussions.id AS discussion_id, application_id, editor_id, creator_id, content, messages.created_at, is_creator
+      FROM discussions
+      JOIN messages ON discussions.id = messages.discussion_id
+
+      WHERE discussions.id = ? 
+      ORDER BY messages.created_at ASC
+    `, [discussionId, userId, userId]);
+
+    console.log("Discussion récupérée :", messages);
+
+    if (messages.length === 0) {
+      return res.status(404).json({ error: "Discussion non trouvée" });
+    }
+
+    res.json({ discussion: messages });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 
 
 // ------------------- LANCEMENT -------------------

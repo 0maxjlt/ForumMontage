@@ -61,6 +61,7 @@ export async function initDb() {
       message TEXT,
       statut ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      seen_by_creator BIT DEFAULT 0,
       FOREIGN KEY (video_id) REFERENCES video_requests(id),
       FOREIGN KEY (applicant_id) REFERENCES users(id)
     );
