@@ -25,7 +25,6 @@
   } from "@mui/material";
   import Slider from "@mui/material/Slider";
 
-  import Draggable from "react-draggable";
 
   import KeyboardArrowLeft from "@mui/icons-material/KeyboardArrowLeft";
   import KeyboardArrowRight from "@mui/icons-material/KeyboardArrowRight";
