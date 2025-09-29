@@ -321,13 +321,11 @@ function Dashboard() {
                                         body: JSON.stringify({
                                             title: "",
                                             description: "",
-                                            script: "",
                                             status: "closed",
                                             estimated_video_duration: 0,
                                             estimated_rushes_duration: 0,
                                             price_min: 0,
                                             price_max: 0,
-                                            frequence: "",
                                             tags: "",
                                             favorite: false,
                                         }),
