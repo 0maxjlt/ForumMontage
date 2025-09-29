@@ -1,18 +1,20 @@
 import React, { useState, useEffect, use } from 'react';
-import { Card, Stack, Typography, Box, Avatar, Divider, Button, Badge } from '@mui/material';
+import { Card, Stack, Typography, Box, Avatar, Divider, Button, Badge, TextField, IconButton } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import { useNavigate } from 'react-router-dom';
 
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SendIcon from '@mui/icons-material/Send';
+
 
 function Discussions() {
     const [discussions, setDiscussions] = useState([]);
     const [selectedDiscussion, setSelectedDiscussion] = useState(null);
     const [user, setUser] = useState(null);
+    const [otherUser, setOtherUser] = useState(null);
 
     const navigate = useNavigate();
-    
 
 
 
@@ -35,6 +37,28 @@ function Discussions() {
             })
             .catch((err) => console.error(err));
     }, []);
+
+
+    useEffect(() => {
+        if (selectedDiscussion) {
+            fetch(`/api/other_user/${selectedDiscussion[0].discussion_id}`, {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            })
+                .then((response) => {
+                if (!response.ok) throw new Error(`Erreur lors de la récupération de l'autre utilisateur (status ${response.status})`);
+                return response.json();
+            })
+            .then((data) => {
+                if (data) {
+                    console.log("Autre utilisateur récupéré :", data);
+                    setOtherUser(data);
+                }
+            })
+            .catch((err) => console.error(err));
+        }
+    }, [selectedDiscussion]);
 
     useEffect(() => {
         fetch("/api/discussions_list", {
@@ -69,7 +93,7 @@ function Discussions() {
             .then((data) => {
                 setSelectedDiscussion(data.discussion);
                 console.log("Messages récupérés pour la discussion :", data.discussion);
-               
+
             })
             .catch((err) => console.error(err));
 
@@ -219,7 +243,7 @@ function Discussions() {
                                 </Avatar>
                                 <Stack direction="column" alignItems="flex-start">
                                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                        {selectedDiscussion.other_username || "Utilisateur"}
+                                        {otherUser ? otherUser.username : "Utilisateur"}
                                     </Typography>
                                     <Typography variant="caption" sx={{ color: "gray", fontSize: "0.8rem" }}>
                                         {selectedDiscussion.created_at?.split("T")[0]}
@@ -228,18 +252,18 @@ function Discussions() {
                             </Box>
 
                             {/* Contenu des messages */}
-                            <Stack spacing={2} sx={{ flexGrow: 1, overflowY: "auto", px: 2, py: 2, bgcolor: "#0d0d0d" }}>
+                            <Stack spacing={5} sx={{ flexGrow: 1, overflowY: "auto", px: 2, py: 2, bgcolor: "#0d0d0d" }}>
                                 {selectedDiscussion.map((msg, index) => (
 
                                     <Box
                                         key={index}
                                         sx={{
-                                            alignSelf: msg.from_user ? "flex-end" : "flex-start",
-                                            maxWidth: "80%",
-                                            bgcolor: msg.from_user ? "#89CE94" : "#1e1e1e",
+                                            alignSelf: msg.is_creator ? user.id === msg.creator_id ? "flex-end" : "flex-start" : user.id === msg.editor_id ? "flex-end" : "flex-start",
+                                            maxWidth: "60%",
+                                            bgcolor: msg.is_creator ? user.id === msg.creator_id ? "#3d5c42ff" : "#1e1e1e" : user.id === msg.editor_id ? "#3d5c42ff" : "#1e1e1e",
                                             px: 2,
                                             py: 1.5,
-                                            borderRadius: "16px 16px 16px 4px",
+                                            borderRadius: msg.is_creator ? user.id === msg.creator_id ? "16px 16px 4px 16px" : "16px 16px 16px 4px" : user.id === msg.editor_id ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
                                             boxShadow: 2,
                                         }}
                                     >
@@ -256,7 +280,43 @@ function Discussions() {
                                         </Typography>
                                     </Box>
                                 ))}
+
                             </Stack>
+                            <Stack direction="row" alignItems="center" justifyContent="center" sx={{mt:0}}>
+                                <TextField
+                                    placeholder="Écrire un message..."
+                                    multiline
+                                    minRows={1}
+                                    maxRows={5}
+                                    variant="filled"
+                                    fullWidth
+                                    sx={{
+                                        p: 1,
+                                        "& .MuiFilledInput-root": {
+
+                                            borderRadius: "10px 10px 0 0",
+                                            backgroundColor: "#1e1e1e",
+                                           
+                                        
+                                            "&:before": { borderBottom: "1px solid #444" },
+                                            "&:hover:before": { borderBottom: "2px solid #90caf9" },
+                                            "&:after": { borderBottom: "2px solid #90caf9" },
+                                        },
+                                        "& .MuiFilledInput-input": {
+                                            
+                                            overflowY: "auto",
+                                            maxHeight: 150,
+                                            boxSizing: "border-box",
+                                        },
+                                    }}
+                                />
+
+                            <IconButton color="primary" sx={{ ml: 3, mr: 3 }}>
+                                <SendIcon />
+                            </IconButton>
+                        </Stack>
+
+
                         </>
                     ) : (
                         <Stack alignItems="center" justifyContent="center" sx={{ flexGrow: 1 }}>
