@@ -7,15 +7,31 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
 
+import { io } from 'socket.io-client';
+import { useRef } from 'react';
 
 function Discussions() {
     const [discussions, setDiscussions] = useState([]);
     const [selectedDiscussion, setSelectedDiscussion] = useState(null);
     const [user, setUser] = useState(null);
     const [otherUser, setOtherUser] = useState(null);
+    const [newMessage, setNewMessage] = useState("");
+    const [socket, setSocket] = useState(null);
+    const [messages, setMessages] = useState([]);
 
+    const [creatorId, setCreatorId] = useState(null);
+    const [editorId, setEditorId] = useState(null);
+
+
+    const messagesEndRef = useRef(null);
     const navigate = useNavigate();
 
+    useEffect(() => {
+        // Scroller en bas à chaque nouveau message
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+        }
+    }, [messages]);
 
 
     useEffect(() => {
@@ -47,16 +63,18 @@ function Discussions() {
                 credentials: "include",
             })
                 .then((response) => {
-                if (!response.ok) throw new Error(`Erreur lors de la récupération de l'autre utilisateur (status ${response.status})`);
-                return response.json();
-            })
-            .then((data) => {
-                if (data) {
-                    console.log("Autre utilisateur récupéré :", data);
-                    setOtherUser(data);
-                }
-            })
-            .catch((err) => console.error(err));
+                    if (!response.ok) throw new Error(`Erreur lors de la récupération de l'autre utilisateur (status ${response.status})`);
+                    return response.json();
+                })
+                .then((data) => {
+                    if (data) {
+                        console.log("Autre utilisateur récupéré :", data);
+                        setOtherUser(data);
+                        setCreatorId(selectedDiscussion[0].creator_id);
+                        setEditorId(selectedDiscussion[0].editor_id);
+                    }
+                })
+                .catch((err) => console.error(err));
         }
     }, [selectedDiscussion]);
 
@@ -78,6 +96,44 @@ function Discussions() {
             })
             .catch((err) => console.error(err));
     }, []);
+
+    useEffect(() => {
+        const s = io("http://localhost:3001", {
+            withCredentials: true, // pour envoyer le cookie JWT
+        });
+
+        s.on("connect", () => {
+            console.log("✅ Connecté au serveur socket");
+        });
+
+        s.on("new_message", (msg) => {
+            console.log("📩 Nouveau message :", msg);
+            setMessages((prev) => [...prev, msg]);
+            console.log("Messages mis à jour :", messages);
+
+        });
+
+        setSocket(s);
+        return () => s.disconnect();
+    }, []);
+
+    const sendMessage = () => {
+        console.log("Envoi du message :", newMessage);
+        if (!newMessage.trim() || !socket) return;
+
+        console.log("Envoi du message :", newMessage);
+
+        console.log("Données de la discussion sélectionnée :", selectedDiscussion);
+
+        socket.emit("new_message", {
+            discussionId: selectedDiscussion[0].discussion_id,
+            applicationId: selectedDiscussion[0].application_id,
+            text: newMessage,
+            userId: user.id,
+        });
+
+        setNewMessage("");
+    };
 
     const handleSelectDiscussion = (discussion_id) => {
         console.log("Sélection de la discussion ID :", discussion_id);
@@ -218,6 +274,7 @@ function Discussions() {
                     </Stack>
                 </Stack>
 
+
                 {/* Colonne droite - Détails de la discussion */}
                 <Card
                     sx={{
@@ -232,6 +289,7 @@ function Discussions() {
                         boxShadow: 6,
                         p: 0,
                         overflow: "hidden",
+
                     }}
                 >
                     {selectedDiscussion ? (
@@ -252,7 +310,7 @@ function Discussions() {
                             </Box>
 
                             {/* Contenu des messages */}
-                            <Stack spacing={5} sx={{ flexGrow: 1, overflowY: "auto", px: 2, py: 2, bgcolor: "#0d0d0d" }}>
+                            <Stack ref={messagesEndRef} spacing={5} sx={{ flexGrow: 1, overflowY: "auto", px: 2, py: 2, bgcolor: "#0d0d0d" }}>
                                 {selectedDiscussion.map((msg, index) => (
 
                                     <Box
@@ -267,6 +325,7 @@ function Discussions() {
                                             boxShadow: 2,
                                         }}
                                     >
+
                                         <Typography
                                             variant="body1"
                                             sx={{
@@ -278,11 +337,46 @@ function Discussions() {
                                         >
                                             {msg.content}
                                         </Typography>
+                                        
+                                        <Typography variant="caption" sx={{ color: "#dadadaff" }}>
+                                            {msg.created_at ? new Date(msg.created_at).toLocaleString().split(" ")[0] : ""}
+                                        </Typography>
+                                    </Box>
+                                ))}
+
+                                {messages.map((msg, index) => (
+
+                                    <Box
+                                        key={index}
+                                        sx={{
+                                            alignSelf: msg.is_creator ? user.id === creatorId ? "flex-end" : "flex-start" : user.id === editorId ? "flex-end" : "flex-start",
+                                            maxWidth: "60%",
+                                            bgcolor: msg.is_creator ? user.id === creatorId ? "#3d5c42ff" : "#1e1e1e" : user.id === editorId ? "#3d5c42ff" : "#1e1e1e",
+                                            px: 2,
+                                            py: 1.5,
+                                            borderRadius: msg.is_creator ? user.id === creatorId ? "16px 16px 4px 16px" : "16px 16px 16px 4px" : user.id === editorId ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                                            boxShadow: 2,
+                                        }}
+                                    >
+                                        <Typography variant="caption" sx={{ color: "#888" }}>
+                                            {msg.created_at ? new Date(msg.created_at).toLocaleString().split(" ")[0] : ""}
+                                        </Typography>
+                                        <Typography
+                                            variant="body1"
+                                            sx={{
+                                                whiteSpace: "pre-wrap",
+                                                lineHeight: 1.5,
+                                                fontSize: "0.95rem",
+                                                textAlign: "left",
+                                            }}
+                                        >
+                                            {msg.text}
+                                        </Typography>
                                     </Box>
                                 ))}
 
                             </Stack>
-                            <Stack direction="row" alignItems="center" justifyContent="center" sx={{mt:0}}>
+                            <Stack direction="row" alignItems="center" justifyContent="center" sx={{ mt: 0 }}>
                                 <TextField
                                     placeholder="Écrire un message..."
                                     multiline
@@ -290,20 +384,29 @@ function Discussions() {
                                     maxRows={5}
                                     variant="filled"
                                     fullWidth
+
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && !e.shiftKey) {
+                                            e.preventDefault(); // empêche le saut de ligne
+                                            sendMessage(); // ta fonction d’envoi
+                                        }
+                                    }}
                                     sx={{
                                         p: 1,
                                         "& .MuiFilledInput-root": {
 
                                             borderRadius: "10px 10px 0 0",
                                             backgroundColor: "#1e1e1e",
-                                           
-                                        
+
+
                                             "&:before": { borderBottom: "1px solid #444" },
                                             "&:hover:before": { borderBottom: "2px solid #90caf9" },
                                             "&:after": { borderBottom: "2px solid #90caf9" },
                                         },
                                         "& .MuiFilledInput-input": {
-                                            
+
                                             overflowY: "auto",
                                             maxHeight: 150,
                                             boxSizing: "border-box",
@@ -311,10 +414,10 @@ function Discussions() {
                                     }}
                                 />
 
-                            <IconButton color="primary" sx={{ ml: 3, mr: 3 }}>
-                                <SendIcon />
-                            </IconButton>
-                        </Stack>
+                                <IconButton color="primary" sx={{ ml: 3, mr: 3 }}>
+                                    <SendIcon />
+                                </IconButton>
+                            </Stack>
 
 
                         </>
@@ -328,6 +431,7 @@ function Discussions() {
                 </Card>
             </Stack>
         </Stack>
+
     );
 }
 
