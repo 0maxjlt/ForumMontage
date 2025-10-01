@@ -1,6 +1,7 @@
 import { Server as SocketIOServer } from "socket.io";
 import jwt from "jsonwebtoken";
 import { query } from "./db.js";
+import { create } from "domain";
 
 
 const onlineUsers = new Map();
@@ -36,30 +37,51 @@ export function initSocketServer(server, SECRET) {
         console.log("Utilisateurs en ligne :", Array.from(onlineUsers.keys()));
 
         // Chat privé
-        socket.on("new_message", async ({ applicationId, text }) => {
+        socket.on("new_message", async ({ discussionId, applicationId, text, userId }) => {
+            console.log("Événement new_message reçu", { discussionId, applicationId, text, userId });
             try {
-                if (!applicationId || !text || text.trim().length === 0) return;
+                if (!userId || !discussionId || !text || text.trim().length === 0) return;
 
-                console.log("Nouveau message reçu", { applicationId, from: socket.userId, text });
+                console.log("Nouveau message reçu", { discussionId, from: socket.userId, text });
 
-                // Enregistrer en DB
-                await query(
-                    "INSERT INTO messages (application_id, sender_id, content, created_at) VALUES (?, ?, ?, NOW())",
-                    [applicationId, socket.userId, text]
-                );
-
-                console.log("Message sauvegardé en DB", { applicationId, from: socket.userId, text });
-
-                // Récupérer l’application pour savoir qui est impliqué
-                const [appData] = await query(
-                    "SELECT video_creator_id, editor_id FROM applications WHERE id = ?",
+                const video = await query(
+                    "SELECT applicant_id from applications WHERE id = ?",
                     [applicationId]
                 );
 
-                if (!appData) return;
+                const applicant_id = video[0]?.applicant_id;
+
+                if (!applicant_id) {
+                    console.log("Vidéo non trouvée pour userId:", userId);
+                    return;
+                }
+
+                if (socket.userId !== applicant_id && socket.userId !== userId) {
+                    console.log("Utilisateur non autorisé à envoyer ce message");
+                    return;
+                }
+
+                const is_creator = socket.userId === applicant_id ? 0 : 1;
+                const newDate = new Date();
+
+                // Enregistrer en DB
+                await query(
+                    "INSERT INTO messages (is_creator, discussion_id, content, created_at) VALUES (?, ?, ?, ?)",
+                    [is_creator, discussionId, text, newDate]
+                );
+
+                console.log("Message sauvegardé en DB", { discussionId, from: socket.userId, text });
+
+                // Récupérer l’application pour savoir qui est impliqué
+                const [discData] = await query(
+                    "SELECT editor_id, creator_id FROM discussions WHERE application_id = ?",
+                    [discussionId]
+                );
+
+                if (!discData) return;
 
                 // Envoyer au bon utilisateur 
-                const receivers = [appData.video_creator_id, appData.editor_id];
+                const receivers = [discData.creator_id, discData.editor_id];
                 console.log("Envoi du message aux utilisateurs :", receivers);
                 
 
@@ -67,9 +89,9 @@ export function initSocketServer(server, SECRET) {
                     const targetSocket = onlineUsers.get(uid);
                     if (targetSocket) {
                         targetSocket.emit("new_message", {
-                            applicationId,
-                            from: socket.userId,
                             text,
+                            is_creator,
+                            created_at: newDate,
                         });
                     }
                 });

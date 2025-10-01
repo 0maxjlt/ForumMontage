@@ -565,6 +565,38 @@ app.get("/api/videos/:username/:videoId", authMiddleware, async (req, res) => {
 
 
 // --- MESSAGERIE ---
+
+app.get("/api/other_user/:discussionId", authMiddleware, async (req, res) => {
+  const discussionId = req.params.discussionId;
+  const userId = req.user.id;
+
+  try {
+    const otherUser = await query(`
+      SELECT users.id, users.username
+      FROM users
+      JOIN discussions ON users.id = discussions.editor_id OR users.id = discussions.creator_id
+      WHERE users.id = (
+          CASE 
+            WHEN discussions.editor_id = ? THEN discussions.creator_id 
+            ELSE discussions.editor_id 
+          END
+      )
+      AND discussions.id = ?
+    `, [userId, discussionId]);
+
+    console.log("Autre utilisateur récupéré :", otherUser);
+
+    if (!otherUser[0]) {
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+    }
+
+    res.json(otherUser[0]);
+  } catch (err) {
+    console.error("Erreur récupération autre utilisateur :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 app.get("/api/applications_list", authMiddleware, async (req, res) => {
 
   const creator_id = req.user.id;
