@@ -783,7 +783,11 @@ app.get("/api/discussions_list", authMiddleware, async (req, res) => {
         FROM messages
         WHERE discussion_id = d.id
       )
-    `, [userId, userId]);
+
+      AND (d.editor_id = ? OR d.creator_id = ?)
+
+
+    `, [userId, userId, userId, userId]);
 
 
     console.log("Discussions récupérées :", discussions);

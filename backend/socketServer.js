@@ -70,7 +70,7 @@ export function initSocketServer(server, SECRET) {
                     [is_creator, discussionId, text, newDate]
                 );
 
-                console.log("Message sauvegardé en DB", { discussionId, from: socket.userId, text });
+                console.log("Message sauvegardé en DB ",  text );
 
                 // Récupérer l’application pour savoir qui est impliqué
                 const [discData] = await query(
