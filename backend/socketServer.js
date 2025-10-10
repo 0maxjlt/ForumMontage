@@ -49,6 +49,8 @@ export function initSocketServer(server, SECRET) {
                     [applicationId]
                 );
 
+                console.log("Données de la vidéo récupérées :", video);
+
                 const applicant_id = video[0]?.applicant_id;
 
                 if (!applicant_id) {
@@ -75,8 +77,10 @@ export function initSocketServer(server, SECRET) {
                 // Récupérer l’application pour savoir qui est impliqué
                 const [discData] = await query(
                     "SELECT editor_id, creator_id FROM discussions WHERE application_id = ?",
-                    [discussionId]
+                    [applicationId]
                 );
+
+                console.log("Données de la discussion récupérées :", discData);
 
                 if (!discData) return;
 

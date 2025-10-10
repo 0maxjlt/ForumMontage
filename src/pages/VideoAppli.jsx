@@ -128,39 +128,6 @@ const VideoAppli = () => {
             });
     }, [videoId]);
 
-    useEffect(() => {
-        const s = io("http://localhost:3001", {
-            withCredentials: true, // pour envoyer le cookie JWT
-        });
-
-        s.on("connect", () => {
-            console.log("✅ Connecté au serveur socket");
-        });
-
-        s.on("new_message", (msg) => {
-            console.log("📩 Nouveau message :", msg);
-            setMessages((prev) => [...prev, msg]);
-        });
-
-        setSocket(s);
-        return () => s.disconnect();
-    }, []);
-
-    // Envoi d’un message
-    const sendMessage = () => {
-        console.log("Envoi du message :", newMessage);
-        if (!newMessage.trim() || !socket) return;
-
-        console.log("Envoi du message :", newMessage, application.id);
-
-        socket.emit("new_message", {
-            applicationId: application.id,
-            text: newMessage,
-        });
-
-        setNewMessage("");
-    };
-
     const handleSubmit = (e) => {
         e.preventDefault();
 
@@ -548,48 +515,8 @@ const VideoAppli = () => {
                 </Card>
             )}
 
-            {/* Chat */}
+        
 
-            <Box
-                sx={{
-                    height: 200,
-                    overflowY: "auto",
-                    border: "1px solid #ddd",
-                    mb: 2,
-                    p: 1,
-                    borderRadius: 1,
-                    backgroundColor: "#242424ff",
-                }}
-            >
-                <Stack spacing={1}>
-                    {messages.map((m, i) => (
-                        <Typography
-                            key={i}
-                            variant="body2"
-                            sx={{
-
-                            }}
-                        >
-                            {m.text}
-                        </Typography>
-                    ))}
-                </Stack>
-            </Box>
-
-            <Stack direction="row" spacing={1}>
-                <TextField
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Écrire un message..."
-                    onKeyDown={(e) => { if (e.key === "Enter") sendMessage(); }}
-                />
-                <Button variant="contained" onClick={sendMessage}>
-                    Envoyer
-                </Button>
-            </Stack>
 
 
         </Box>
