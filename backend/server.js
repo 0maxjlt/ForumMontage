@@ -831,8 +831,54 @@ app.get("/api/discussions/:discussionId", authMiddleware, async (req, res) => {
   }
 });
 
+app.get("/api/applications/notifications", authMiddleware, async (req, res) => {
+
+  const userId = req.user.id;
+
+  console.log("Récupérer les notifications pour l'utilisateur :", userId);
+
+  try {
+    const notifications = await query(`
+      SELECT COUNT(seen_by_creator) AS unseen_count
+      FROM applications a
+      JOIN video_requests v ON a.video_id = v.id
+      WHERE creator_id = ? AND seen_by_creator = 0
+    `, [userId]);
+
+    console.log("Notifications récupérées :", notifications);
+
+    res.json({ notifications });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+app.get("/api/discussions/notifications", authMiddleware, async (req, res) => {
+
+  const userId = req.user.id;
 
 
-// ------------------- LANCEMENT -------------------
+  console.log("Récupérer les notifications pour l'utilisateur :", userId);
+
+
+
+  try {
+    const notifications = await query(`
+      SELECT COUNT(seen_by_creator)
+      FROM discussions d
+      WHERE (creator_id = ? AND seen_by_creator = 0) OR (editor_id = ? AND seen_by_editor = 0)
+    `, [userId, userId]);
+
+    console.log("Notifications récupérées :", notifications);
+
+
+    res.json({ notifications });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 
 

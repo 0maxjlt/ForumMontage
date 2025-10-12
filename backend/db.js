@@ -73,11 +73,15 @@ export async function initDb() {
     application_id INT,
     editor_id INT,
     creator_id INT,
+    seen_by_creator BIT DEFAULT 0,
+    seen_by_editor BIT DEFAULT 0,
+
     FOREIGN KEY (application_id) REFERENCES applications(id),
     FOREIGN KEY (editor_id) REFERENCES users(id),
     FOREIGN KEY (creator_id) REFERENCES users(id)
   );
   `);
+
   await query(`
     CREATE TABLE IF NOT EXISTS messages(
       id INT AUTO_INCREMENT PRIMARY KEY,

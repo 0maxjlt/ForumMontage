@@ -9,12 +9,14 @@ import { nav } from 'framer-motion/client';
 
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-
+import NotificationsIcon from "@mui/icons-material/Notifications";
 
 function DemandesApplications() {
     const [discussions, setDiscussions] = useState([]);
     const [applications, setApplications] = useState([]);
     const [selectedApp, setSelectedApp] = useState(null);
+    const [notifications, setNotifications] = useState([]);
+
 
     const navigate = useNavigate();
 
@@ -43,6 +45,30 @@ function DemandesApplications() {
             })
             .catch((err) => console.error(err));
     }, []);
+
+    useEffect(() => {
+          fetch("/api/discussions/notifications", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(
+                        `Erreur lors de la récupération des notifications (status ${response.status})`
+                    );
+                }
+                return response.json();
+            })
+            .then((data) => {
+                if (data.notifications) {
+                    console.log("Notifications récupérées :", data.notifications);
+                    setNotifications(data.notifications);
+                }
+            })
+            .catch((err) => console.error(err));
+    }, []);
+
 
 
     const handleSeen = (applicationId) => {
@@ -119,9 +145,7 @@ function DemandesApplications() {
 
 
             {/* Message si aucune demande */}
-            {applications.length === 0 && (
-                <Typography>Aucune demande de message.</Typography>
-            )}
+
 
             {/* Layout responsive */}
             <Stack
@@ -144,12 +168,15 @@ function DemandesApplications() {
                     </Typography>
 
                     <Stack direction="row" sx={{ pr: 2 }}>
+                        <Badge badgeContent={notifications} color="error">
+                            <NotificationsIcon />
+                        </Badge>
                         <Button endIcon={<ArrowBackIcon />}
                             sx={{ width: "100%", p: 4, color: "white", backgroundColor: "#273529ff", "&:hover": { backgroundColor: "#354d3dff" } }}
                             variant="contained"
                             onClick={() => navigate('/messagerie')}
                         >
-                            Voir les demandes d'application
+                            Voir les discussions
                         </Button>
                     </Stack>
 
@@ -162,6 +189,9 @@ function DemandesApplications() {
                             pr: 2,
                         }}
                     >
+                        {applications.length === 0 && (
+                            <Typography>Aucune demande de message.</Typography>
+                        )}
                         {applications.map((app) => (
                             <Card
                                 key={app.id}

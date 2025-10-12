@@ -9,6 +9,7 @@ import SendIcon from '@mui/icons-material/Send';
 
 import { io } from 'socket.io-client';
 import { useRef } from 'react';
+import { nav } from 'framer-motion/client';
 
 function Discussions() {
     const [discussions, setDiscussions] = useState([]);
@@ -50,6 +51,12 @@ function Discussions() {
                     console.log("Utilisateur récupéré :", data);
                     setUser(data);
                 }
+
+                else {
+                    console.log("Aucun utilisateur trouvé");
+                    navigate("/login");
+                }
+
             })
             .catch((err) => console.error(err));
     }, []);
@@ -177,9 +184,7 @@ function Discussions() {
 
     return (
         <Stack spacing={2} sx={{ p: 0, m: 0 }}>
-            {discussions.length === 0 && (
-                <Typography>Aucune discussion disponible.</Typography>
-            )}
+
 
             <Stack
                 direction={{ xs: "column", md: "row" }}
@@ -199,6 +204,8 @@ function Discussions() {
                         Vos discussions
                     </Typography>
 
+
+
                     <Stack direction="row" sx={{ pr: 2 }}>
                         <Button endIcon={<ArrowForwardIcon />}
                             sx={{ width: "100%", p: 4, color: "white", backgroundColor: "#273529ff", "&:hover": { backgroundColor: "#354d3dff" } }}
@@ -209,6 +216,9 @@ function Discussions() {
                         </Button>
                     </Stack>
 
+                    {discussions.length === 0 && (
+                        <Typography>Aucune discussion disponible.</Typography>
+                    )}
 
                     <Stack spacing={2} sx={{ overflowY: "auto", pr: 2 }}>
                         {discussions.map(disc => (
@@ -337,7 +347,7 @@ function Discussions() {
                                         >
                                             {msg.content}
                                         </Typography>
-                                        
+
                                         <Typography variant="caption" sx={{ color: "#dadadaff" }}>
                                             {msg.created_at ? new Date(msg.created_at).toLocaleString().split(" ")[0] : ""}
                                         </Typography>
