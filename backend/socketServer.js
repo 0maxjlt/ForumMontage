@@ -108,6 +108,8 @@ export function initSocketServer(server, SECRET) {
             }
         });
 
+        
+
         socket.on("disconnect", () => {
             onlineUsers.delete(socket.userId);
             console.log("❌ User déconnecté :", socket.username);

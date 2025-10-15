@@ -806,7 +806,10 @@ app.get("/api/discussions/:discussionId", authMiddleware, async (req, res) => {
   const { discussionId } = req.params;
   const userId = req.user.id;
 
+ 
   console.log("Récupérer la discussion :", discussionId, "pour l'utilisateur :", userId);
+
+
 
   try {
     const messages = await query(`
@@ -831,7 +834,7 @@ app.get("/api/discussions/:discussionId", authMiddleware, async (req, res) => {
   }
 });
 
-app.get("/api/applications/notifications", authMiddleware, async (req, res) => {
+app.get("/api/applications/msg/notifications", authMiddleware, async (req, res) => {
 
   const userId = req.user.id;
 
@@ -847,14 +850,14 @@ app.get("/api/applications/notifications", authMiddleware, async (req, res) => {
 
     console.log("Notifications récupérées :", notifications);
 
-    res.json({ notifications });
+    res.json({ notifications: Number(notifications[0].unseen_count) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
-app.get("/api/discussions/notifications", authMiddleware, async (req, res) => {
+app.get("/api/discussions/msg/notifications", authMiddleware, async (req, res) => {
 
   const userId = req.user.id;
 
@@ -865,15 +868,15 @@ app.get("/api/discussions/notifications", authMiddleware, async (req, res) => {
 
   try {
     const notifications = await query(`
-      SELECT COUNT(seen_by_creator)
-      FROM discussions d
+      SELECT COUNT(seen_by_creator) AS unseen_count
+      FROM discussions
       WHERE (creator_id = ? AND seen_by_creator = 0) OR (editor_id = ? AND seen_by_editor = 0)
     `, [userId, userId]);
 
-    console.log("Notifications récupérées :", notifications);
+    console.log("Notifications récupérées :", Number(notifications[0].unseen_count));
 
 
-    res.json({ notifications });
+    res.json({ notifications: Number(notifications[0].unseen_count  ) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erreur serveur" });

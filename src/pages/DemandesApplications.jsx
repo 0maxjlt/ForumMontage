@@ -47,12 +47,13 @@ function DemandesApplications() {
     }, []);
 
     useEffect(() => {
-          fetch("/api/discussions/notifications", {
+          fetch("/api/discussions/msg/notifications", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         })
             .then((response) => {
+                console.log("Réponse reçue :", response);
                 if (!response.ok) {
                     throw new Error(
                         `Erreur lors de la récupération des notifications (status ${response.status})`
@@ -168,10 +169,10 @@ function DemandesApplications() {
                     </Typography>
 
                     <Stack direction="row" sx={{ pr: 2 }}>
-                        <Badge badgeContent={notifications} color="error">
+                   
+                        <Button endIcon={     <Badge badgeContent={notifications} color="error">
                             <NotificationsIcon />
-                        </Badge>
-                        <Button endIcon={<ArrowBackIcon />}
+                        </Badge>}
                             sx={{ width: "100%", p: 4, color: "white", backgroundColor: "#273529ff", "&:hover": { backgroundColor: "#354d3dff" } }}
                             variant="contained"
                             onClick={() => navigate('/messagerie')}
