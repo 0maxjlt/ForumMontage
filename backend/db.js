@@ -8,6 +8,8 @@ export const pool = mariadb.createPool({
   database: "forumdb",
   connectionLimit: 5,
   port: 3306,
+  allowPublicKeyRetrieval: true
+
 });
 
 // Fonction utilitaire pour exécuter des requêtes
